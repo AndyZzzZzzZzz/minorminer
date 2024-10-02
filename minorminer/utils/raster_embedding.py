@@ -14,14 +14,9 @@
 #
 from minorminer import subgraph as glasgow
 from .independent_embeddings import get_independent_embeddings
-from tqdm import tqdm
 import dwave_networkx as dnx
 import networkx as nx
-from dwave.system.samplers import DWaveSampler
-import dimod
-import time
 import numpy as np
-import matplotlib.pyplot as plt
 from dwave import embedding
 
 
