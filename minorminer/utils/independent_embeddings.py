@@ -2,11 +2,8 @@ import itertools
 import time
 import networkx as nx
 from numpy import random
-from line_profiler_pycharm import profile
 from tqdm.auto import tqdm
 
-
-@profile
 def improve_greedy_independent_set(_G, _S, greed=1):
     """
     Attempts to expand an independent set by removing sets of size "greed" and replacing it with a set of size "greed+1"
@@ -90,7 +87,6 @@ def make_embedding_graph(embs):
 
     return Gemb
 
-@profile
 def get_independent_embeddings(embs, greed_depth=1, num_stable_sets=10):
     """
     Generates a large subset of mutually disjoint embeddings from a set of possibly overlapping embeddings.
