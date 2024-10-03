@@ -20,161 +20,204 @@ import numpy as np
 from dwave import embedding
 
 
-def write_lad_graph(_f, _graph):
-    _f.write(f'{len(_graph)}\n')
-    _graph = nx.convert_node_labels_to_integers(_graph.copy())
-    for v in _graph:
-        s = f'{_graph.degree(v)} '
-        for u in _graph.neighbors(v):
-            s += f'{u} '
-        print(s)
-        _f.write(s + '\n')
-        pass
+def write_lad_graph(file_handle, graph):
+    """
+    Writes the given graph to a file in LAD (Leighton Algorithm Description) format.
+
+    :param file_handle: File handle to write the graph data.
+    :param graph: NetworkX graph to be written.
+    """
+    file_handle.write(f'{len(graph)}\n')
+    graph = nx.convert_node_labels_to_integers(graph.copy())
+    for node in graph:
+        line = f'{graph.degree(node)} '
+        for neighbor in graph.neighbors(node):
+            line += f'{neighbor} '
+        file_handle.write(line + '\n')
 
 
-def get_chimera_subgrid(A, rows, cols, gridsize=16):
-    """Make a subgraph of a Chimera-16 (DW2000Q) graph on a set of rows and columns of unit cells.
+def get_chimera_subgrid(qubit_graph, rows, cols, grid_size=16):
+    """
+    Create a subgraph of a Chimera-16 (DW2000Q) graph based on specified rows and columns of unit cells.
 
-    :param A: Qubit connectivity graph
-    :param rows: Iterable of rows of unit cells to include
-    :param cols: Iterable of columns of unit cells to include
-    :return: The subgraph of A induced on the nodes in "rows" and "cols"
+    :param qubit_graph: Qubit connectivity graph (NetworkX graph).
+    :param rows: Iterable of row indices of unit cells to include.
+    :param cols: Iterable of column indices of unit cells to include.
+    :param grid_size: Size of the Chimera grid (default is 16).
+    :return: Subgraph of qubit_graph induced on the nodes in 'rows' and 'cols'.
     """
     raise Exception("Not implemented")
-    pass
 
 
-def get_pegasus_subgrid(A, rows, cols, gridsize=16):
-    """Make a subgraph of a Pegasus-16 (Advantage) graph on a set of rows and columns of unit cells.
-
-    :param A: Qubit connectivity graph
-    :param rows: Iterable of rows of unit cells to include
-    :param cols: Iterable of columns of unit cells to include
-    :return: The subgraph of A induced on the nodes in "rows" and "cols"
+def get_pegasus_subgrid(qubit_graph, rows, cols, grid_size=16):
     """
+    Create a subgraph of a Pegasus-16 (Advantage) graph based on specified rows and columns of unit cells.
 
-    coords = [dnx.pegasus_coordinates(gridsize).linear_to_nice(v) for v in A.nodes]
-    used_coords = [c for c in coords if c[1] in cols and c[2] in rows]
-
-    return A.subgraph([dnx.pegasus_coordinates(gridsize).nice_to_linear(c) for c in used_coords]).copy()
-
-
-def get_zephyr_subgrid(A, rows, cols, gridsize):
-    """Make a subgraph of a Zephyr (Advantage2) graph on a set of rows and columns of unit cells.
-
-    :param A: Qubit connectivity graph
-    :param rows: Iterable of rows of unit cells to include
-    :param cols: Iterable of columns of unit cells to include
-    :return: The subgraph of A induced on the nodes in "rows" and "cols"
+    :param qubit_graph: Qubit connectivity graph (NetworkX graph).
+    :param rows: Iterable of row indices of unit cells to include.
+    :param cols: Iterable of column indices of unit cells to include.
+    :param grid_size: Size of the Pegasus grid (default is 16).
+    :return: Subgraph of qubit_graph induced on the nodes in 'rows' and 'cols'.
     """
+    coordinates = [dnx.pegasus_coordinates(grid_size).linear_to_nice(node) for node in qubit_graph.nodes]
+    used_coords = [coord for coord in coordinates if coord[1] in cols and coord[2] in rows]
+    nodes = [dnx.pegasus_coordinates(grid_size).nice_to_linear(coord) for coord in used_coords]
+    return qubit_graph.subgraph(nodes).copy()
 
-    tile = dnx.zephyr_graph(len(rows))
+
+def get_zephyr_subgrid(qubit_graph, rows, cols, grid_size):
+    """
+    Create a subgraph of a Zephyr (Advantage2) graph based on specified rows and columns of unit cells.
+
+    :param qubit_graph: Qubit connectivity graph (NetworkX graph).
+    :param rows: Iterable of row indices of unit cells to include.
+    :param cols: Iterable of column indices of unit cells to include.
+    :param grid_size: Size of the Zephyr grid.
+    :return: Subgraph of qubit_graph induced on the nodes in 'rows' and 'cols'.
+    """
+    tile_graph = dnx.zephyr_graph(len(rows))
     sublattice_mappings = dnx.zephyr_sublattice_mappings
-    f = sublattice_mappings(
-        tile, A, offset_list=[(rows[0], cols[0])]
+    mapping_iterator = sublattice_mappings(
+        tile_graph, qubit_graph, offset_list=[(rows[0], cols[0])]
     )
-    ff = list(f)[0]
-    subgraph = A.subgraph([ff(_) for _ in tile]).copy()
+    mapping_function = list(mapping_iterator)[0]
+    subgraph_nodes = [mapping_function(node) for node in tile_graph]
+    return qubit_graph.subgraph(subgraph_nodes).copy()
 
-    return subgraph
 
+def search_for_subgraphs_in_subgrid(base_graph, subgraph, timeout=10, max_number_of_embeddings=np.inf, verbose=True, **kwargs):
+    """
+    Find embeddings of subgraph within base_graph using the Glasgow subgraph finder.
 
-def search_for_subgraphs_in_subgrid(B, subgraph, timeout=10, max_number_of_embeddings=np.inf, verbose=True, **kwargs):
-    embs = []
-    while True and len(embs) < max_number_of_embeddings:
-        temp = glasgow.find_subgraph(subgraph, B, timeout=timeout, triggered_restarts=True)
-        if len(temp) == 0:
+    :param base_graph: NetworkX graph to search within.
+    :param subgraph: NetworkX graph representing the subgraph to find.
+    :param timeout: Timeout for each subgraph search.
+    :param max_number_of_embeddings: Maximum number of embeddings to find.
+    :param verbose: If True, prints progress messages.
+    :param **kwargs: Additional keyword arguments for the subgraph finder.
+    :return: List of embeddings found.
+    """
+    embeddings = []
+    while len(embeddings) < max_number_of_embeddings:
+        embedding_result = glasgow.find_subgraph(subgraph, base_graph, timeout=timeout, triggered_restarts=True)
+        if len(embedding_result) == 0:
             break
         else:
-            B.remove_nodes_from(temp.values())
-            embs.append(temp)
+            base_graph.remove_nodes_from(embedding_result.values())
+            embeddings.append(embedding_result)
             if verbose:
-                print(f'{len(B)} vertices remain...')
+                print(f'{len(base_graph)} vertices remain...')
 
     if verbose:
-        print(f'Found {len(embs)} embeddings.')
-    return embs
+        print(f'Found {len(embeddings)} embeddings.')
+    return embeddings
 
 
 def raster_embedding_search(
-        _A, subgraph, gridsize=0, raster_breadth=5, delete_used=True,
+        hardware_graph, subgraph, grid_size=0, raster_breadth=None, delete_used=True,
         verbose=True, topology='pegasus',
         greed_depth=0,
         verify_embeddings=True,
         max_number_of_embeddings=np.inf,
         **kwargs):
-    A = _A.copy()
+    """
+    Perform raster scan embedding search on the hardware graph.
 
+    :param hardware_graph: NetworkX graph representing the hardware connectivity.
+    :param subgraph: NetworkX graph representing the subgraph to embed.
+    :param grid_size: Size of the grid (default is 0).
+    :param raster_breadth: Breadth of the raster scan (default is 5 if None).
+    :param delete_used: If True, remove used nodes after each embedding is found.
+    :param verbose: If True, prints progress messages.
+    :param topology: Topology type ('chimera', 'pegasus', or 'zephyr').
+    :param greed_depth: Depth of greediness for improving independent embeddings.
+    :param verify_embeddings: If True, verify each embedding found.
+    :param max_number_of_embeddings: Maximum number of embeddings to find.
+    :param **kwargs: Additional keyword arguments.
+    :return: Numpy array of embeddings.
+    """
+    working_graph = hardware_graph.copy()
 
+    if raster_breadth is None:
+        raster_breadth = 5
+        
     # Do we assert that A has correctly sorted nodes?
     #assert list(_A.nodes) == sorted(list(_A.nodes)), "Input hardware graph must have nodes in sorted order."
 
     assert list(subgraph.nodes) == list(range(len(subgraph))), "Subgraph must have consecutive nonnegative integer nodes."
 
-    embs = []
+    embeddings = []
 
     if topology == 'chimera':
         sublattice_mappings = dnx.chimera_sublattice_mappings
-        tile = dnx.chimera_graph(raster_breadth)
+        tile_graph = dnx.chimera_graph(raster_breadth)
     elif topology == 'pegasus':
         sublattice_mappings = dnx.pegasus_sublattice_mappings
-        tile = dnx.pegasus_graph(raster_breadth)
+        tile_graph = dnx.pegasus_graph(raster_breadth)
     elif topology == 'zephyr':
         sublattice_mappings = dnx.zephyr_sublattice_mappings
-        tile = dnx.zephyr_graph(raster_breadth)
+        tile_graph = dnx.zephyr_graph(raster_breadth)
     else:
-        raise ValueError
+        raise ValueError("Unsupported topology type.")
 
-    for i, f in enumerate(sublattice_mappings(tile, A)):
-        B = A.subgraph([f(_) for _ in tile]).copy()
+    for tile_index, mapping_function in enumerate(sublattice_mappings(tile_graph, working_graph)):
+        tile_subgraph = working_graph.subgraph([mapping_function(node) for node in tile_graph]).copy()
 
         if verbose:
-            print(f'tile {i:3d}: offset={f.offset} starting with {len(B)} vertices')
+            print(f'tile {tile_index:3d}: offset={mapping_function.offset} starting with {len(tile_subgraph)} vertices')
 
-        sub_embs = search_for_subgraphs_in_subgrid(B, subgraph, verbose=verbose,
-                                                   max_number_of_embeddings=max_number_of_embeddings,
-                                                   **kwargs)
+        tile_embeddings = search_for_subgraphs_in_subgrid(tile_subgraph, subgraph, verbose=verbose,
+                                                          max_number_of_embeddings=max_number_of_embeddings,
+                                                          **kwargs)
         if delete_used:
-            for sub_emb in sub_embs:
-                A.remove_nodes_from(sub_emb.values())
+            for embedding in tile_embeddings:
+                working_graph.remove_nodes_from(embedding.values())
 
         if verify_embeddings:
-            for emb in sub_embs:
-                X = list(embedding.diagnose_embedding({p: [emb[p]] for p in sorted(emb.keys())}, subgraph, _A))
-                if len(X):
-                    print(X[0])
-                    raise Exception
+            for embedding_result in tile_embeddings:
+                issues = list(embedding.diagnose_embedding({p: [embedding_result[p]] for p in sorted(embedding_result.keys())}, subgraph, hardware_graph))
+                if issues:
+                    print(issues[0])
+                    raise Exception("Embedding verification failed.")
 
-        embs += sub_embs
-        if len(embs) >= max_number_of_embeddings:
+        embeddings += tile_embeddings
+        if len(embeddings) >= max_number_of_embeddings:
             break
 
-    # Get independent set of embeddings
-    independent_embs = get_independent_embeddings(embs, greed_depth=greed_depth)
-
-    embmat = np.asarray([[ie[v] for ie in independent_embs] for v in sorted(subgraph.nodes)]).T
+    independent_embeddings = get_independent_embeddings(embeddings, greed_depth=greed_depth)
+    embedding_matrix = np.asarray([[embedding[node] for embedding in independent_embeddings] for node in sorted(subgraph.nodes)]).T
 
     if verify_embeddings:
-        for emb in embmat:
-            X = list(embedding.diagnose_embedding({p: [emb[p]] for p in range(len(emb))}, subgraph, _A))
-            if len(X):
-                print(X[0])
-                raise Exception
+        for emb in embedding_matrix:
+            issues = list(embedding.diagnose_embedding({p: [emb[p]] for p in range(len(emb))}, subgraph, hardware_graph))
+            if issues:
+                print(issues[0])
+                raise Exception("Embedding verification failed.")
 
-    assert len(np.unique(embmat)) == len(embmat.ravel())
+    assert len(np.unique(embedding_matrix)) == len(embedding_matrix.ravel())
 
-    return embmat
-
-
+    return embedding_matrix
 
 def whole_graph_embedding_search(
-        _A, subgraph,
+        hardware_graph, subgraph,
         verbose=True,
         greed_depth=0,
         verify_embeddings=True,
         max_number_of_embeddings=np.inf,
         **kwargs):
-    A = _A.copy()
+    """
+    Perform an embedding search over the entire hardware graph.
+
+    :param hardware_graph: NetworkX graph representing the hardware connectivity.
+    :param subgraph: NetworkX graph representing the subgraph to embed.
+    :param verbose: If True, prints progress messages.
+    :param greed_depth: Depth of greediness for improving independent embeddings.
+    :param verify_embeddings: If True, verify each embedding found.
+    :param max_number_of_embeddings: Maximum number of embeddings to find.
+    :param **kwargs: Additional keyword arguments.
+    :return: Numpy array of embeddings.
+    """
+    working_graph = hardware_graph.copy()
 
 
     # Do we assert that A has correctly sorted nodes?
@@ -182,34 +225,31 @@ def whole_graph_embedding_search(
 
     assert list(subgraph.nodes) == list(range(len(subgraph))), "Subgraph must have consecutive nonnegative integer nodes."
 
-
     if verbose:
-        print(f'Whole graph, starting with {len(A)} vertices')
+        print(f'Whole graph, starting with {len(working_graph)} vertices')
 
-    embs = search_for_subgraphs_in_subgrid(
-        A, subgraph, verbose=verbose,
+    embeddings = search_for_subgraphs_in_subgrid(
+        working_graph, subgraph, verbose=verbose,
         max_number_of_embeddings=max_number_of_embeddings,
         **kwargs)
 
     if verify_embeddings:
-        for emb in embs:
-            X = list(embedding.diagnose_embedding({p: [emb[p]] for p in sorted(emb.keys())}, subgraph, _A))
-            if len(X):
-                print(X[0])
-                raise Exception
+        for embedding_result in embeddings:
+            issues = list(embedding.diagnose_embedding({p: [embedding_result[p]] for p in sorted(embedding_result.keys())}, subgraph, hardware_graph))
+            if issues:
+                print(issues[0])
+                raise Exception("Embedding verification failed.")
 
-    # Get independent set of embeddings
-    independent_embs = get_independent_embeddings(embs, greed_depth=greed_depth)
-
-    embmat = np.asarray([[ie[v] for ie in independent_embs] for v in sorted(subgraph.nodes)]).T
+    independent_embeddings = get_independent_embeddings(embeddings, greed_depth=greed_depth)
+    embedding_matrix = np.asarray([[embedding[node] for embedding in independent_embeddings] for node in sorted(subgraph.nodes)]).T
 
     if verify_embeddings:
-        for emb in embmat:
-            X = list(embedding.diagnose_embedding({p: [emb[p]] for p in range(len(emb))}, subgraph, _A))
-            if len(X):
-                print(X[0])
-                raise Exception
+        for emb in embedding_matrix:
+            issues = list(embedding.diagnose_embedding({p: [emb[p]] for p in range(len(emb))}, subgraph, hardware_graph))
+            if issues:
+                print(issues[0])
+                raise Exception("Embedding verification failed.")
 
-    assert len(np.unique(embmat)) == len(embmat.ravel())
+    assert len(np.unique(embedding_matrix)) == len(embedding_matrix.ravel())
 
-    return embmat
+    return embedding_matrix
