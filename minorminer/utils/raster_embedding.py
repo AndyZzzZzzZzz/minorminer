@@ -140,9 +140,6 @@ def raster_embedding_search(
 
     if raster_breadth is None:
         raster_breadth = 5
-        
-    # Do we assert that A has correctly sorted nodes?
-    #assert list(_A.nodes) == sorted(list(_A.nodes)), "Input hardware graph must have nodes in sorted order."
 
     assert list(subgraph.nodes) == list(range(len(subgraph))), "Subgraph must have consecutive nonnegative integer nodes."
 
@@ -218,10 +215,6 @@ def whole_graph_embedding_search(
     :return: Numpy array of embeddings.
     """
     working_graph = hardware_graph.copy()
-
-
-    # Do we assert that A has correctly sorted nodes?
-    #assert list(_A.nodes) == sorted(list(_A.nodes)), "Input hardware graph must have nodes in sorted order."
 
     assert list(subgraph.nodes) == list(range(len(subgraph))), "Subgraph must have consecutive nonnegative integer nodes."
 
