@@ -2,7 +2,6 @@ import itertools
 import time
 import networkx as nx
 from numpy import random
-from tqdm.auto import tqdm
 
 
 def improve_greedy_independent_set(_G, _S, greed=1):
@@ -88,7 +87,7 @@ def make_embedding_graph(embs):
     else:
         raise ValueError("Embeddings must be either a list of dicts or a list of lists.")
 
-    for i, j in tqdm(itertools.combinations(range(len(Gemb)), 2), total=int(len(Gemb)*(len(Gemb)-1)/2)):
+    for i, j in itertools.combinations(range(len(Gemb)), 2):
         if not vertex_sets[i].isdisjoint(vertex_sets[j]):
             Gemb.add_edge(i, j)
 
@@ -120,7 +119,7 @@ def get_independent_embeddings(embs, greed_depth=1, num_stable_sets=10):
     Sbest = None
     max_size = 0
 
-    for _ in tqdm(range(num_stable_sets)):
+    for _ in range(num_stable_sets):
         if len(Gemb) > 0:
             S = []
             for _ in range(100):
