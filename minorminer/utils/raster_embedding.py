@@ -19,7 +19,7 @@ import numpy as np
 from dwave import embedding
 
 
-def search_for_subgraphs_in_subgrid(B, subgraph, timeout=10, max_number_of_embeddings=np.inf, verbose=True, **kwargs):
+def search_for_subgraphs_in_subgrid(B, subgraph, timeout=10, max_number_of_embeddings=np.inf, **kwargs):
     """
     Searches for subgraphs within a given subgrid.
 
@@ -42,17 +42,13 @@ def search_for_subgraphs_in_subgrid(B, subgraph, timeout=10, max_number_of_embed
         else:
             B.remove_nodes_from(temp.values())
             embs.append(temp)
-            if verbose:
-                print(f'{len(B)} vertices remain...')
 
-    if verbose:
-        print(f'Found {len(embs)} embeddings.')
     return embs
 
 
 def raster_embedding_search(
         _A, subgraph, gridsize=0, raster_breadth=5, delete_used=True,
-        verbose=True, topology='pegasus',
+        topology='pegasus',
         greed_depth=0,
         verify_embeddings=True,
         max_number_of_embeddings=np.inf,
@@ -97,10 +93,8 @@ def raster_embedding_search(
     for i, f in enumerate(sublattice_mappings(tile, A)):
         B = A.subgraph([f(_) for _ in tile]).copy()
 
-        if verbose:
-            print(f'tile {i:3d}: offset={f.offset} starting with {len(B)} vertices')
 
-        sub_embs = search_for_subgraphs_in_subgrid(B, subgraph, verbose=verbose,
+        sub_embs = search_for_subgraphs_in_subgrid(B, subgraph,
                                                    max_number_of_embeddings=max_number_of_embeddings,
                                                    **kwargs)
         if delete_used:
@@ -138,7 +132,6 @@ def raster_embedding_search(
 
 def whole_graph_embedding_search(
         _A, subgraph,
-        verbose=True,
         greed_depth=0,
         verify_embeddings=True,
         max_number_of_embeddings=np.inf,
@@ -162,11 +155,8 @@ def whole_graph_embedding_search(
 
     assert list(subgraph.nodes) == list(range(len(subgraph))), "Subgraph must have consecutive nonnegative integer nodes."
 
-    if verbose:
-        print(f'Whole graph, starting with {len(A)} vertices')
-
     embs = search_for_subgraphs_in_subgrid(
-        A, subgraph, verbose=verbose,
+        A, subgraph,
         max_number_of_embeddings=max_number_of_embeddings,
         **kwargs)
 
