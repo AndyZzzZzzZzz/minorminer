@@ -15,81 +15,8 @@
 from minorminer import subgraph as glasgow
 from .independent_embeddings import get_independent_embeddings
 import dwave_networkx as dnx
-import networkx as nx
 import numpy as np
 from dwave import embedding
-
-
-def write_lad_graph(_f, _graph):
-    """
-    Writes a LAD graph to a file.
-
-    Args:
-        _f (file object): The file to write to.
-        _graph (networkx.Graph): The graph to write.
-    """
-    _f.write(f'{len(_graph)}\n')
-    _graph = nx.convert_node_labels_to_integers(_graph.copy())
-    for v in _graph:
-        s = f'{_graph.degree(v)} ' + ' '.join(str(u) for u in _graph.neighbors(v))
-        _f.write(s + '\n')
-
-
-def get_chimera_subgrid(A, rows, cols, gridsize=16):
-    """
-    Make a subgraph of a Chimera-16 (DW2000Q) graph on a set of rows and columns of unit cells.
-
-    Args:
-        A (networkx.Graph): Qubit connectivity graph.
-        rows (iterable): Rows of unit cells to include.
-        cols (iterable): Columns of unit cells to include.
-        gridsize (int): Size of the grid.
-
-    Returns:
-        networkx.Graph: The subgraph of A induced on the specified rows and columns.
-    """
-    raise NotImplementedError("Chimera subgrid generation not implemented.")
-
-
-def get_pegasus_subgrid(A, rows, cols, gridsize=16):
-    """
-    Make a subgraph of a Pegasus-16 (Advantage) graph on a set of rows and columns of unit cells.
-
-    Args:
-        A (networkx.Graph): Qubit connectivity graph.
-        rows (iterable): Rows of unit cells to include.
-        cols (iterable): Columns of unit cells to include.
-        gridsize (int): Size of the grid.
-
-    Returns:
-        networkx.Graph: The subgraph of A induced on the specified rows and columns.
-    """
-    coordinates = [dnx.pegasus_coordinates(gridsize).linear_to_nice(v) for v in A.nodes]
-    used_coords = [c for c in coordinates if c[1] in cols and c[2] in rows]
-
-    return A.subgraph([dnx.pegasus_coordinates(gridsize).nice_to_linear(c) for c in used_coords]).copy()
-
-
-def get_zephyr_subgrid(A, rows, cols, gridsize):
-    """
-    Make a subgraph of a Zephyr (Advantage2) graph on a set of rows and columns of unit cells.
-
-    Args:
-        A (networkx.Graph): Qubit connectivity graph.
-        rows (iterable): Rows of unit cells to include.
-        cols (iterable): Columns of unit cells to include.
-        gridsize (int): Size of the grid.
-
-    Returns:
-        networkx.Graph: The subgraph of A induced on the specified rows and columns.
-    """
-    tile = dnx.zephyr_graph(len(rows))
-    sublattice_mappings = dnx.zephyr_sublattice_mappings
-    f = sublattice_mappings(tile, A, offset_list=[(rows[0], cols[0])])
-    ff = list(f)[0]
-    subgraph = A.subgraph([ff(_) for _ in tile]).copy()
-
-    return subgraph
 
 
 def search_for_subgraphs_in_subgrid(B, subgraph, timeout=10, max_number_of_embeddings=np.inf, verbose=True, **kwargs):
