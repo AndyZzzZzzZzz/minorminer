@@ -4,7 +4,7 @@ import networkx as nx
 from numpy import random
 
 
-def improve_greedy_independent_set(_G, _S, greed=1):
+def improve_greedy_independent_set(G, S, greed=1):
     """
     Attempts to expand an independent set by removing sets of size "greed" and replacing them with a set of size "greed+1".
 
@@ -16,7 +16,7 @@ def improve_greedy_independent_set(_G, _S, greed=1):
     Returns:
         set: An improved independent set, at least as large as the original.
     """
-    _S = _S.copy()
+    _S = S.copy()
     improved_flag = True
 
     while improved_flag:
@@ -30,12 +30,12 @@ def improve_greedy_independent_set(_G, _S, greed=1):
 
             NC = []
             for c in C:
-                NC += (list(_G.neighbors(c)))
+                NC += (list(G.neighbors(c)))
             NC = sorted(list(set(NC)))
 
             for v in new_s:
                 for c in NC.copy():
-                    if _G.has_edge(v, c):
+                    if G.has_edge(v, c):
                         NC.remove(c)
 
             if len(NC) == 0:
@@ -44,14 +44,14 @@ def improve_greedy_independent_set(_G, _S, greed=1):
 
             S_NC = []
             for iSNC in range(10):
-                temp = nx.maximal_independent_set(_G.subgraph(NC))
+                temp = nx.maximal_independent_set(G.subgraph(NC))
                 if len(temp)>len(S_NC):
                     S_NC = temp.copy()
 
             new_s += S_NC
 
             if len(new_s) > len(backup_new_s):
-                assert nx.number_of_edges(nx.subgraph(_G, new_s)) == 0
+                assert nx.number_of_edges(nx.subgraph(G, new_s)) == 0
                 print(f"Improving by greed={greed}.  Deleted {greed} and added {len(S_NC)}, total = {len(new_s)}")
                 _S = new_s.copy()
                 improved_flag = True

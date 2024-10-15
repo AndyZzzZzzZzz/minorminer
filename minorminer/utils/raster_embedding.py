@@ -47,7 +47,7 @@ def search_for_subgraphs_in_subgrid(B, subgraph, timeout=10, max_number_of_embed
 
 
 def raster_embedding_search(
-        _A, subgraph, gridsize=0, raster_breadth=5, delete_used=True,
+        A, subgraph, gridsize=0, raster_breadth=5, delete_used=True,
         topology='pegasus',
         greed_depth=0,
         verify_embeddings=True,
@@ -72,7 +72,7 @@ def raster_embedding_search(
     Returns:
         np.ndarray: An embedding matrix.
     """
-    A = _A.copy()
+    _A = A.copy()
 
     assert list(subgraph.nodes) == list(range(len(subgraph))), "Subgraph must have consecutive nonnegative integer nodes."
 
@@ -90,21 +90,20 @@ def raster_embedding_search(
     else:
         raise ValueError(f"Unsupported topology: {topology}")
 
-    for i, f in enumerate(sublattice_mappings(tile, A)):
-        B = A.subgraph([f(_) for _ in tile]).copy()
-
+    for i, f in enumerate(sublattice_mappings(tile, _A)):
+        B = _A.subgraph([f(_) for _ in tile]).copy()
 
         sub_embs = search_for_subgraphs_in_subgrid(B, subgraph,
                                                    max_number_of_embeddings=max_number_of_embeddings,
                                                    **kwargs)
         if delete_used:
             for sub_emb in sub_embs:
-                A.remove_nodes_from(sub_emb.values())
+                _A.remove_nodes_from(sub_emb.values())
 
         if verify_embeddings:
             for emb in sub_embs:
                 X = list(embedding.diagnose_embedding(
-                    {p: [emb[p]] for p in sorted(emb.keys())}, subgraph, _A
+                    {p: [emb[p]] for p in sorted(emb.keys())}, subgraph, A
                 ))
                 if X:
                     raise Exception("Embedding verification failed.")
@@ -120,7 +119,7 @@ def raster_embedding_search(
 
     if verify_embeddings:
         for emb in embmat:
-            X = list(embedding.diagnose_embedding({p: [emb[p]] for p in range(len(emb))}, subgraph, _A))
+            X = list(embedding.diagnose_embedding({p: [emb[p]] for p in range(len(emb))}, subgraph, A))
             if X:
                 raise Exception("Embedding verification failed.")
 
@@ -131,7 +130,7 @@ def raster_embedding_search(
 
 
 def whole_graph_embedding_search(
-        _A, subgraph,
+        A, subgraph,
         greed_depth=0,
         verify_embeddings=True,
         max_number_of_embeddings=np.inf,
@@ -151,19 +150,19 @@ def whole_graph_embedding_search(
     Returns:
         np.ndarray: An embedding matrix.
     """
-    A = _A.copy()
+    _A = A.copy()
 
     assert list(subgraph.nodes) == list(range(len(subgraph))), "Subgraph must have consecutive nonnegative integer nodes."
 
     embs = search_for_subgraphs_in_subgrid(
-        A, subgraph,
+        _A, subgraph,
         max_number_of_embeddings=max_number_of_embeddings,
         **kwargs)
 
     if verify_embeddings:
         for emb in embs:
             X = list(embedding.diagnose_embedding(
-                {p: [emb[p]] for p in sorted(emb.keys())}, subgraph, _A
+                {p: [emb[p]] for p in sorted(emb.keys())}, subgraph, A
             ))
             if X:
                raise Exception("Embedding verification failed.")
@@ -176,7 +175,7 @@ def whole_graph_embedding_search(
     if verify_embeddings:
         for emb in embmat:
             X = list(embedding.diagnose_embedding(
-                {p: [emb[p]] for p in range(len(emb))}, subgraph, _A
+                {p: [emb[p]] for p in range(len(emb))}, subgraph, A
             ))
             if X:
                 raise Exception("Embedding verification failed.")
