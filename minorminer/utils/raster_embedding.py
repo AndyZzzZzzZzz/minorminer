@@ -47,7 +47,7 @@ def search_for_subgraphs_in_subgrid(B, subgraph, timeout=10, max_number_of_embed
 
 
 def raster_embedding_search(
-        A, subgraph, gridsize=0, raster_breadth=5, delete_used=True,
+        A, subgraph, gridsize=0, raster_breadth=5,
         topology='pegasus',
         greed_depth=0,
         verify_embeddings=True,
@@ -61,7 +61,6 @@ def raster_embedding_search(
         subgraph (networkx.Graph): The subgraph to embed.
         gridsize (int, optional): Grid size. Defaults to 0.
         raster_breadth (int, optional): Raster breadth. Defaults to 5.
-        delete_used (bool, optional): Whether to delete used nodes after embedding. Defaults to True.
         verbose (bool, optional): Whether to print progress messages. Defaults to True.
         topology (str, optional): The topology type ('chimera', 'pegasus', 'zephyr'). Defaults to 'pegasus'.
         greed_depth (int, optional): Depth of greedy improvement. Defaults to 0.
@@ -96,9 +95,9 @@ def raster_embedding_search(
         sub_embs = search_for_subgraphs_in_subgrid(B, subgraph,
                                                    max_number_of_embeddings=max_number_of_embeddings,
                                                    **kwargs)
-        if delete_used:
-            for sub_emb in sub_embs:
-                _A.remove_nodes_from(sub_emb.values())
+        
+        for sub_emb in sub_embs:
+            _A.remove_nodes_from(sub_emb.values())
 
         if verify_embeddings:
             for emb in sub_embs:
