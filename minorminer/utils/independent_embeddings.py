@@ -106,10 +106,11 @@ def get_independent_embeddings(embs, greed_depth=1, num_stable_sets=10):
     Returns:
         list: A sublist of embeddings that are mutually disjoint.
     """
+    max_num_embeddings = 20000
+
     start = time.process_time()
-    # len(emb) is too many to analyze. Taking 20,000 at random
-    if len(embs) > 20000:
-        embs = random.choice(embs, 20000)
+    if len(embs) > max_num_embeddings:
+        embs = random.choice(embs, max_num_embeddings)
 
     print(f'Building graph ({len(embs)} embeddings).  ',end='\n')
     Gemb = make_embedding_graph(embs)
