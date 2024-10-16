@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from minorminer import subgraph as glasgow
-from .independent_embeddings import get_independent_embeddings
 import dwave_networkx as dnx
 import numpy as np
 from dwave import embedding
@@ -88,7 +87,7 @@ def raster_embedding_search(
         tile = dnx.zephyr_graph(raster_breadth)
     else:
         raise ValueError(f"Unsupported topology: {topology}")
-
+    
     for i, f in enumerate(sublattice_mappings(tile, _A)):
         B = _A.subgraph([f(_) for _ in tile]).copy()
 
@@ -111,10 +110,9 @@ def raster_embedding_search(
         if len(embs) >= max_number_of_embeddings:
             break
 
-    # Get independent set of embeddings
-    independent_embs = get_independent_embeddings(embs, greed_depth=greed_depth)
+    # Get independent set of embeddings (removed)
 
-    embmat = np.asarray([[ie[v] for ie in independent_embs] for v in sorted(subgraph.nodes)]).T
+    embmat = np.asarray([[ie[v] for ie in embs] for v in sorted(subgraph.nodes)]).T
 
     if verify_embeddings:
         for emb in embmat:
