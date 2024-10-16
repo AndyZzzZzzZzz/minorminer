@@ -110,7 +110,7 @@ def raster_embedding_search(
         if len(embs) >= max_number_of_embeddings:
             break
 
-    # Get independent set of embeddings (removed)
+    # Get independent set of embeddings (removed, potential feature expansion)
 
     embmat = np.asarray([[ie[v] for ie in embs] for v in sorted(subgraph.nodes)]).T
 
