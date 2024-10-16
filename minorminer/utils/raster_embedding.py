@@ -15,10 +15,9 @@
 from minorminer import subgraph as glasgow
 import dwave_networkx as dnx
 import numpy as np
-from dwave import embedding
 
 
-def search_for_subgraphs_in_subgrid(B, subgraph, timeout=10, max_number_of_embeddings=np.inf, **kwargs):
+def search_for_subgraphs_in_subgrid(B, subgraph, timeout=10, max_number_of_embeddings=np.inf):
     """
     Searches for subgraphs within a given subgrid.
 
@@ -28,8 +27,6 @@ def search_for_subgraphs_in_subgrid(B, subgraph, timeout=10, max_number_of_embed
         timeout (int, optional): Timeout for the subgraph search. Defaults to 10.
         max_number_of_embeddings (int, optional): Maximum number of embeddings to find. Defaults to np.inf.
         verbose (bool, optional): Whether to print progress messages. Defaults to True.
-        **kwargs: Additional keyword arguments.
-
     Returns:
         list: A list of embeddings found.
     """
@@ -46,10 +43,8 @@ def search_for_subgraphs_in_subgrid(B, subgraph, timeout=10, max_number_of_embed
 
 
 def raster_embedding_search(
-        A, subgraph, gridsize=0, raster_breadth=5,
+        A, subgraph, raster_breadth=5,
         topology='pegasus',
-        greed_depth=0,
-        verify_embeddings=True,
         max_number_of_embeddings=np.inf,
         **kwargs):
     """
@@ -58,12 +53,8 @@ def raster_embedding_search(
     Args:
         _A (networkx.Graph): The hardware graph.
         subgraph (networkx.Graph): The subgraph to embed.
-        gridsize (int, optional): Grid size. Defaults to 0.
         raster_breadth (int, optional): Raster breadth. Defaults to 5.
-        verbose (bool, optional): Whether to print progress messages. Defaults to True.
         topology (str, optional): The topology type ('chimera', 'pegasus', 'zephyr'). Defaults to 'pegasus'.
-        greed_depth (int, optional): Depth of greedy improvement. Defaults to 0.
-        verify_embeddings (bool, optional): Whether to verify embeddings. Defaults to True.
         max_number_of_embeddings (int, optional): Maximum number of embeddings to find. Defaults to np.inf.
         **kwargs: Additional keyword arguments.
 
