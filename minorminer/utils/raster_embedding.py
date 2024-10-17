@@ -53,8 +53,10 @@ def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf')):
     return embs
 
 
-def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
-                            max_num_emb=float('Inf')):
+def raster_embedding_search(
+        A, subgraph, raster_breadth=5,
+        topology='pegasus',
+        max_number_of_embeddings=np.inf):
     """
     Searches for multiple embeddings within a rastered target graph.
 
@@ -90,29 +92,26 @@ def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
         t = T.graph['tile']
         tile = dnx.zephyr_graph(m=raster_breadth, t=t)
     else:
-        raise ValueError("source graphs must a Zephyr graph constructed by "
-                         "dwave_networkx as chimera, pegasus or zephyr type")
+        raise ValueError(f"Unsupported topology: {topology}")
+    
+    for i, f in enumerate(sublattice_mappings(tile, _A)):
+        B = _A.subgraph([f(_) for _ in tile]).copy()
 
-    # TO DO: Add a function that finds the minimal feasible raster_breadth for
-    # S on T. I.E. full-yield tile has enough nodes, has enough edges, perhaps
-    # uses other (efficiently calculated) statistics. Can then test against
-    # this function.
-    if tile.number_of_nodes() < S.number_of_nodes():
-        warnings.warn('raster_breadth is too small to accomodate embedding of '
-                      'all the source graph nodes')
-    if tile.number_of_edges() < S.number_of_edges():
-        warnings.warn('raster_breadth is too small to accomodate embedding of '
-                      'all the source graph edges')
+        sub_embs = search_for_subgraphs_in_subgrid(B, subgraph,
+                                                   max_number_of_embeddings=max_number_of_embeddings)
+        
+        # Move verification to testing script 
+        # for sub_emb in sub_embs:
+        #    _A.remove_nodes_from(sub_emb.values())
 
-    _T = T.copy()
-    embs = []
-    for i, f in enumerate(sublattice_mappings(tile, _T)):
-        Tr = _T.subgraph([f(n) for n in tile])
+        # if verify_embeddings:
+        #    for emb in sub_embs:
+        #        X = list(embedding.diagnose_embedding(
+        #            {p: [emb[p]] for p in sorted(emb.keys())}, subgraph, A
+        #        ))
+        #        if X:
+        #            raise Exception("Embedding verification failed.")
 
-        sub_embs = find_multiple_embeddings(
-            S, Tr,
-            max_num_emb=max_num_emb,
-            timeout=timeout)
         embs += sub_embs
         if len(embs) >= max_num_emb:
             break
