@@ -1,4 +1,4 @@
-# Copyright 2023 D-Wave
+# Copyright 2024 D-Wave
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,60 +12,85 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from minorminer import subgraph as glasgow
 import dwave_networkx as dnx
 import numpy as np
+import warnings
+from minorminer.subgraph import find_subgraph
 
 
-def search_for_subgraphs_in_subgrid(B, subgraph, timeout=10, max_number_of_embeddings=np.inf):
+def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf')):
     """
-    Searches for subgraphs within a given subgrid.
+    Finds multiple disjoint embeddings of a source graph onto a target graph
+
+    Uses a greedy strategy to deterministically find multiple disjoint
+    1:1 embeddings of a source graph within a target graph. Randomizing the
+    node order in S and/or T can be used for a non-deterministic pattern.
 
     Args:
-        B (networkx.Graph): The hardware graph to search within.
-        subgraph (networkx.Graph): The subgraph to find.
-        timeout (int, optional): Timeout for the subgraph search. Defaults to 10.
-        max_number_of_embeddings (int, optional): Maximum number of embeddings to find. Defaults to np.inf.
-        verbose (bool, optional): Whether to print progress messages. Defaults to True.
+        S (networkx.Graph): The source graph to embed.
+        T (networkx.Graph): The target graph in which to embed.
+        timeout (int, optional): Timeout per subgraph search in seconds.
+            Defaults to 10.
+        max_num_emb (int, optional): Maximum number of embeddings to find.
+            Defaults to inf (unbounded).
     Returns:
-        list: A list of embeddings found.
+        list: A list of disjoint embeddings. Each embedding defines a 1:1 map
+            from the source to the target in the form of a dictionary with no
+            reusue of target variables.
     """
+    _T = T.copy()
     embs = []
-    while True and len(embs) < max_number_of_embeddings:
-        temp = glasgow.find_subgraph(subgraph, B, timeout=timeout, triggered_restarts=True)
-        if len(temp) == 0:
+    while True and len(embs) < max_num_emb:
+        # A potential feature enhancement would be to allow different embedding
+        # heuristics here, including those that are not 1:1
+        emb = find_subgraph(S, _T, timeout=timeout, triggered_restarts=True)
+        if len(emb) == 0:
             break
         else:
-            B.remove_nodes_from(temp.values())
-            embs.append(temp)
+            _T.remove_nodes_from(emb.values())
+            embs.append(emb)
 
     return embs
 
 
-def raster_embedding_search(
-        A, subgraph, raster_breadth=5,
-        topology='pegasus',
-        max_number_of_embeddings=np.inf,
-        **kwargs):
+def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
+                            topology=None, max_num_emb=float('Inf')):
     """
-    Searches for embeddings within a rastered subgraph.
+    Searches for multiple embeddings within a rastered target graph.
 
     Args:
-        _A (networkx.Graph): The hardware graph.
-        subgraph (networkx.Graph): The subgraph to embed.
-        raster_breadth (int, optional): Raster breadth. Defaults to 5.
-        topology (str, optional): The topology type ('chimera', 'pegasus', 'zephyr'). Defaults to 'pegasus'.
-        max_number_of_embeddings (int, optional): Maximum number of embeddings to find. Defaults to np.inf.
-        **kwargs: Additional keyword arguments.
-
+        S (networkx.Graph): The source graph to embed.
+        T (networkx.Graph): The target graph in which to embed.
+        raster_breadth (int, optional): Raster breadth. If not specified
+           the full graph is searched.
+        timeout (int, optional): Timeout per subgraph search in seconds.
+            Defaults to 10.
+        topology (str, optional): The topology type ('chimera', 'pegasus',
+            'zephyr'). If not provided is inferred from T.name or S.name
+             assuming these are dwave_networkx graphs. Note that for zephyr
+             and pegasus graphs the tile shape parameter is assumed to be 4
+             (the default).
+        max_num_emb (int, optional): Maximum number of embeddings to find.
+            Defaults to inf (unbounded).
     Returns:
-        np.ndarray: An embedding matrix.
+        list: A list of disjoint embeddings.
     """
-    _A = A.copy()
-
-    assert list(subgraph.nodes) == list(range(len(subgraph))), "Subgraph must have consecutive nonnegative integer nodes."
+    if raster_breadth is None:
+        return find_multiple_embeddings(
+            S, T, timeout=timeout, max_num_emb=max_num_emb)
+    _T = T.copy()
 
     embs = []
+
+    if topology is None:
+        if T.name[:7] == 'chimera' or S.name[:7] == 'chimera':
+            topology = 'chimera'
+        elif T.name[:7] == 'pegasus' or S.name[:7] == 'pegasus':
+            topology = 'pegasus'
+        elif T.name[:6] == 'zephyr' or S.name[:6] == 'zephyr':
+            topology = 'zephyr'
+        else:
+            raise ValueError('Unknown topology cannot be inferred from S or T')
 
     if topology == 'chimera':
         sublattice_mappings = dnx.chimera_sublattice_mappings
@@ -78,42 +103,94 @@ def raster_embedding_search(
         tile = dnx.zephyr_graph(raster_breadth)
     else:
         raise ValueError(f"Unsupported topology: {topology}")
-    
-    for i, f in enumerate(sublattice_mappings(tile, _A)):
-        B = _A.subgraph([f(_) for _ in tile]).copy()
+    if tile.number_of_nodes() < S.number_of_nodes():
+        warnings.warn('raster_breadth is too small to accomodate embedding of '
+                      'all the source graph nodes')
+    if tile.number_of_edges() < S.number_of_edges():
+        warnings.warn('raster_breadth is too small to accomodate embedding of '
+                      'all the source graph edges')
 
-        sub_embs = search_for_subgraphs_in_subgrid(B, subgraph,
-                                                   max_number_of_embeddings=max_number_of_embeddings,
-                                                   **kwargs)
-        
-        # Move verification to testing script 
-        # for sub_emb in sub_embs:
-        #    _A.remove_nodes_from(sub_emb.values())
+    for i, f in enumerate(sublattice_mappings(tile, _T)):
+        Tr = _T.subgraph([f(_) for _ in tile]).copy()
 
-        # if verify_embeddings:
-        #    for emb in sub_embs:
-        #        X = list(embedding.diagnose_embedding(
-        #            {p: [emb[p]] for p in sorted(emb.keys())}, subgraph, A
-        #        ))
-        #        if X:
-        #            raise Exception("Embedding verification failed.")
-
+        sub_embs = find_multiple_embeddings(
+            S, Tr,
+            max_num_emb=max_num_emb,
+            timeout=timeout)
         embs += sub_embs
-        if len(embs) >= max_number_of_embeddings:
+        if len(embs) >= max_num_emb:
             break
 
-    # Get independent set of embeddings (removed, potential feature expansion)
+        for emb in sub_embs:
+            # A potential feature extension would be to generate many
+            # overlapping embeddings and solve an independent set problem. This
+            # may allow additional parallel embeddings.
+            _T.remove_nodes_from(emb.values())
 
-    embmat = np.asarray([[ie[v] for ie in embs] for v in sorted(subgraph.nodes)]).T
+    return embs
 
-    # Move verification to testing script
-    # if verify_embeddings:
-    #     for emb in embmat:
-    #        X = list(embedding.diagnose_embedding({p: [emb[p]] for p in range(len(emb))}, subgraph, A))
-    #        if X:
-    #            raise Exception("Embedding verification failed.")
 
-    # assert len(np.unique(embmat)) == len(embmat.ravel()), "Embeddings are not unique."
+def embeddings_to_ndarray(embs, node_order=None):
+    """ Convert list of embeddings into an ndarray
 
-    return embmat
+    Note this assumes the target graph is labeled by integers and the embedding
+    is 1 to 1(numeric) in all cases. This is the format returned by
+    minorminor.subgraph for the standard presentation of QPU graphs.
 
+    Args:
+        embs (networkx.Graph): A list of embeddings, each list entry in the
+            form of a dictionary with integer values.
+        node_order (iterable, optional): An iterable giving the ordering of
+            variables in each row.
+    Returns:
+        np.ndarray: An embedding matrix; each row defines an embedding ordered
+            by node_order.
+    """
+    if node_order is None:
+        if len(embs) is None:
+            raise ValueError('shape of ndarray cannot be inferred')
+        else:
+            node_order = sorted(embs[0].keys())
+
+    return np.asarray([[ie[v] for ie in embs] for v in node_order]).T
+
+
+if __name__ == "__main__":
+    # A check at minimal scale:
+    for topology in ['chimera', 'pegasus', 'zephyr']:
+        if topology == 'chimera':
+            min_raster_scale = 1
+            S = dnx.chimera_graph(min_raster_scale)
+            T = dnx.chimera_graph(min_raster_scale + 1)  # Allows 4
+            num_anticipated = 4
+        elif topology == 'pegasus':
+            min_raster_scale = 2
+            S = dnx.pegasus_graph(min_raster_scale)
+            T = dnx.pegasus_graph(min_raster_scale + 1)  # Allows 2
+            num_anticipated = 6
+        elif topology == 'zephyr':
+            min_raster_scale = 1
+            S = dnx.zephyr_graph(min_raster_scale)
+            T = dnx.zephyr_graph(min_raster_scale + 1)  # Allows 2
+            num_anticipated = 1
+        print()
+        print(topology)
+        embs = raster_embedding_search(S, T, raster_breadth=min_raster_scale)
+        print(f'{len(embs)} Independent embeddings by rastering')
+        print(embs)
+        assert all(set(emb.keys()) == set(S.nodes()) for emb in embs)
+        assert all(set(emb.values()).issubset(set(T.nodes())) for emb in embs)
+        value_list = [v for emb in embs for v in emb.values()]
+        assert len(set(value_list)) == len(value_list)
+
+        embs = raster_embedding_search(S, T)
+        print(f'{len(embs)} Independent embeddings by direct search')
+        assert all(set(emb.keys()) == set(S.nodes()) for emb in embs)
+        assert all(set(emb.values()).issubset(set(T.nodes())) for emb in embs)
+        value_list = [v for emb in embs for v in emb.values()]
+        assert len(set(value_list)) == len(value_list)
+
+        print('Defaults (full graph search): Presented as an ndarray')
+        print(embeddings_to_ndarray(embs))
+
+    print('See additional usage examples in test_raster_embedding')
