@@ -54,22 +54,19 @@ def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf')):
 
 
 def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
-                            topology=None, max_num_emb=float('Inf')):
+                            max_num_emb=float('Inf')):
     """
     Searches for multiple embeddings within a rastered target graph.
 
     Args:
         S (networkx.Graph): The source graph to embed.
-        T (networkx.Graph): The target graph in which to embed.
+        T (networkx.Graph): The target graph in which to embed. If
+            raster_embedding is not None the graph must be of type zephyr,
+            pegasus or chimera and constructed by dwave_networkx.
         raster_breadth (int, optional): Raster breadth. If not specified
            the full graph is searched.
         timeout (int, optional): Timeout per subgraph search in seconds.
             Defaults to 10.
-        topology (str, optional): The topology type ('chimera', 'pegasus',
-            'zephyr'). If not provided is inferred from T.name or S.name
-             assuming these are dwave_networkx graphs. Note that for zephyr
-             and pegasus graphs the tile shape parameter is assumed to be 4
-             (the default).
         max_num_emb (int, optional): Maximum number of embeddings to find.
             Defaults to inf (unbounded).
     Returns:
@@ -78,31 +75,28 @@ def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
     if raster_breadth is None:
         return find_multiple_embeddings(
             S, T, timeout=timeout, max_num_emb=max_num_emb)
-    _T = T.copy()
 
-    embs = []
-
-    if topology is None:
-        if T.name[:7] == 'chimera' or S.name[:7] == 'chimera':
-            topology = 'chimera'
-        elif T.name[:7] == 'pegasus' or S.name[:7] == 'pegasus':
-            topology = 'pegasus'
-        elif T.name[:6] == 'zephyr' or S.name[:6] == 'zephyr':
-            topology = 'zephyr'
-        else:
-            raise ValueError('Unknown topology cannot be inferred from S or T')
-
-    if topology == 'chimera':
+    # A possible feature enhancement might allow for raster_breadth to be
+    # replaced by raster shape.
+    if T.graph.get('family') == 'chimera':
         sublattice_mappings = dnx.chimera_sublattice_mappings
-        tile = dnx.chimera_graph(raster_breadth)
-    elif topology == 'pegasus':
+        t = T.graph['tile']
+        tile = dnx.chimera_graph(m=raster_breadth, n=raster_breadth, t=t)
+    elif T.graph.get('family') == 'pegasus':
         sublattice_mappings = dnx.pegasus_sublattice_mappings
-        tile = dnx.pegasus_graph(raster_breadth)
-    elif topology == 'zephyr':
+        tile = dnx.pegasus_graph(m=raster_breadth)
+    elif T.graph.get('family') == 'zephyr':
         sublattice_mappings = dnx.zephyr_sublattice_mappings
-        tile = dnx.zephyr_graph(raster_breadth)
+        t = T.graph['tile']
+        tile = dnx.zephyr_graph(m=raster_breadth, t=t)
     else:
-        raise ValueError(f"Unsupported topology: {topology}")
+        raise ValueError("source graphs must a Zephyr graph constructed by "
+                         "dwave_networkx as chimera, pegasus or zephyr type")
+
+    # TO DO: Add a function that finds the minimal feasible raster_breadth for
+    # S on T. I.E. full-yield tile has enough nodes, has enough edges, perhaps
+    # uses other (efficiently calculated) statistics. Can then test against
+    # this function.
     if tile.number_of_nodes() < S.number_of_nodes():
         warnings.warn('raster_breadth is too small to accomodate embedding of '
                       'all the source graph nodes')
@@ -110,8 +104,10 @@ def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
         warnings.warn('raster_breadth is too small to accomodate embedding of '
                       'all the source graph edges')
 
+    _T = T.copy()
+    embs = []
     for i, f in enumerate(sublattice_mappings(tile, _T)):
-        Tr = _T.subgraph([f(_) for _ in tile]).copy()
+        Tr = _T.subgraph([f(n) for n in tile])
 
         sub_embs = find_multiple_embeddings(
             S, Tr,
