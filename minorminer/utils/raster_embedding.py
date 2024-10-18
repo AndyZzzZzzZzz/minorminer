@@ -137,7 +137,8 @@ def embeddings_to_ndarray(embs, node_order=None):
         embs (networkx.Graph): A list of embeddings, each list entry in the
             form of a dictionary with integer values.
         node_order (iterable, optional): An iterable giving the ordering of
-            variables in each row.
+            variables in each row. When not provided variables are ordered to
+            match the first embedding :code:`embs[0].keys()`
     Returns:
         np.ndarray: An embedding matrix; each row defines an embedding ordered
             by node_order.
@@ -146,7 +147,7 @@ def embeddings_to_ndarray(embs, node_order=None):
         if len(embs) is None:
             raise ValueError('shape of ndarray cannot be inferred')
         else:
-            node_order = sorted(embs[0].keys())
+            node_order = embs[0].keys()
 
     return np.asarray([[ie[v] for ie in embs] for v in node_order]).T
 
