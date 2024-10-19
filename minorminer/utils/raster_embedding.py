@@ -43,7 +43,11 @@ def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf')):
     while True and len(embs) < max_num_emb:
         # A potential feature enhancement would be to allow different embedding
         # heuristics here, including those that are not 1:1
-        emb = find_subgraph(S, _T, timeout=timeout, triggered_restarts=True)
+        
+        if subgraph_embedding_feasibility_filter(S, T):
+            emb = find_subgraph(S, _T, timeout=timeout, triggered_restarts=True)
+        else:
+            emb = []
         if len(emb) == 0:
             break
         else:
@@ -188,7 +192,11 @@ def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
     if raster_breadth is None:
         return find_multiple_embeddings(
             S, T, timeout=timeout, max_num_emb=max_num_emb)
-
+    else:
+        feasibility_bound = raster_breadth_subgraph_lower_bound(S, T=T)
+        if feasibility_bound is None or raster_breadth < feasibility_bound:
+            warnings.warn('raster_breadth < lower bound')
+            return []
     # A possible feature enhancement might allow for raster_breadth to be
     # replaced by raster shape.
     if T.graph.get('family') == 'chimera':
@@ -205,11 +213,6 @@ def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
     else:
         raise ValueError("source graphs must a graph constructed by "
                          "dwave_networkx as chimera, pegasus or zephyr type")
-
-    # TO DO: Add a function that finds the minimal feasible raster_breadth for
-    # S on T. I.E. full-yield tile has enough nodes, has enough edges, perhaps
-    # uses other (efficiently calculated) statistics. Can then test against
-    # this function.
 
     _T = T.copy()
     embs = []
