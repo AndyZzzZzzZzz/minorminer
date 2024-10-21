@@ -4,7 +4,7 @@ import unittest
 import networkx as nx
 import numpy as np
 import dwave_networkx as dnx
-from utils import raster_embedding_search
+from minorminer.utils.raster_embedding import raster_embedding_search
 
 
 class TestRasterEmbedding(unittest.TestCase):
