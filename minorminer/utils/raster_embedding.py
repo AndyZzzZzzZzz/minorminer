@@ -19,7 +19,7 @@ import warnings
 import matplotlib.pyplot as plt
 from minorminer.subgraph import find_subgraph
 
-def visualize_embeddings(H, topology='chimera', title=None):
+def visualize_embeddings(H, topology=None, title=None):
     """
     Visualizes the embeddings produced using dwave_networkx's layout 
     according to the specified topology.
@@ -29,11 +29,9 @@ def visualize_embeddings(H, topology='chimera', title=None):
     H : networkx.Graph
         Input graph to be visualized on the topology.
     topology : str, optional
-        The type of topology for visualization. Defaults to 'chimera'.
+        The type of topology for visualization. 
     title : str, optional
         Title of the plot. Defaults to None.
-    graph_size : tuple, optional
-        Parameters for the Chimera graph (e.g., (1, 1, 4)). Adjust as needed.
 
     """
 
@@ -89,48 +87,26 @@ def visualize_embeddings(H, topology='chimera', title=None):
         
         ax.legend(loc='best')
         plt.show()
-    #elif topology == 'zerphyr':
+    elif topology == 'zephyr':
+        fig, ax = plt.subplots(figsize=(8, 6))
+
+        # Create and draw Zephyr graph
+        G = dnx.zephyr_graph(1)  # Adjust size as needed
+        dnx.draw_zephyr(G, ax=ax, node_color='r', label='Unit Cell')
+
+        # Overlay the input graph H on the Zephyr topology
+        dnx.draw_zephyr(H, ax=ax, node_color='b', style='dashed',
+                        edge_color='b', width=3)
+
+        if title:
+            ax.set_title(title)
+        ax.legend(loc='best')
+        plt.show()
 
     else:
-        raise ValueError(f"Topology '{topology}' not supported. Only 'chimera' is available.")
+        raise ValueError(f"Topology '{topology}' not recognized. "
+                         "Use 'chimera', 'pegasus', or 'zephyr'.")
    
-def visualize_chimera_graph(H, title="Chimera Graph"):
-    """
-    Visualizes a Chimera graph using dwave_networkx's Chimera layout.
-
-    Parameters:
-    - H (networkx.Graph): The Chimera graph to visualize.
-    - title (str): Title of the plot.
-    """
-    pos = dnx.chimera_layout(H)
-    
-    # Create a matplotlib figure and axis
-    fig, ax = plt.subplots(figsize=(8, 6))
-    
-    # Draw the Chimera unit cell in red
-    G = dnx.chimera_graph(1, 1, 4)  # Adjust parameters as needed
-    dnx.draw_chimera(G, node_color='r', ax=ax, label='Unit Cell')
-    
-    # if not three type, call nwx draw nwx
-    # match the node color and edge color according to diff embeddings. background gray corresponds for unused embeddings
-    # Draw the input Chimera graph in blue with specific styles
-    dnx.draw_chimera(
-        H, 
-        node_color='b', 
-        node_shape='*', 
-        style='dashed', 
-        edge_color='b', 
-        width=3, 
-        ax=ax, 
-        label='Input Graph'
-    )
-    
-    # Add title and legend
-    plt.title(title)
-    plt.legend()
-    
-    # Display the plot
-    plt.show()
 def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf')):
     """Finds multiple disjoint embeddings of a source graph onto a target graph
 
@@ -406,8 +382,7 @@ if __name__ == "__main__":
         raster_breadth_S = smallest_tile[stopology] + 1
         S = generators[stopology](raster_breadth_S)
 
-        if stopology == 'chimera' or stopology == 'pegasus':
-                visualize_embeddings(S, topology=stopology, title=f'{stopology.capitalize()} Embedding')
+        visualize_embeddings(S, topology=stopology, title=f'{stopology.capitalize()} Embedding')
         # For each target topology, checks whether embedding the graph S into that topology is feasible
         for ttopology in topologies:
             raster_breadth = raster_breadth_subgraph_lower_bound(
