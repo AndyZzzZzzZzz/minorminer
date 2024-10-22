@@ -169,7 +169,7 @@ def raster_breadth_subgraph_lower_bound(S, T=None, topology=None, t=None):
     return raster_breadth
 
 def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
-                            max_num_emb=float('Inf')):
+                            max_num_emb=float('Inf'), tile=None):
     """Searches for multiple embeddings within a rastered target graph.
 
     Args:
