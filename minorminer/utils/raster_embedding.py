@@ -16,9 +16,100 @@ import networkx as nx
 import dwave_networkx as dnx
 import numpy as np
 import warnings
+import matplotlib.pyplot as plt
 from minorminer.subgraph import find_subgraph
 
+def visualize_embeddings(H, topology='chimera', title=None, graph_size=(1, 1, 4)):
+    """
+    Visualizes the embeddings produced using dwave_networkx's layout 
+    according to the specified topology.
 
+    Parameters:
+    -----------
+    H : networkx.Graph
+        Input graph to be visualized on the topology.
+    topology : str, optional
+        The type of topology for visualization. Defaults to 'chimera'.
+    title : str, optional
+        Title of the plot. Defaults to None.
+    graph_size : tuple, optional
+        Parameters for the Chimera graph (e.g., (1, 1, 4)). Adjust as needed.
+
+    """
+
+    if topology == 'chimera':
+        # Set up the figure and axis
+        fig, ax = plt.subplots(figsize=(8, 6))
+        
+        # Create the Chimera topology graph (adjust size as needed)
+        G = dnx.chimera_graph(*graph_size)  
+        
+        # Draw the base Chimera unit cell
+        dnx.draw_chimera(G, node_color='r', ax=ax, label='Unit Cell')
+
+        # Draw the input graph on top of the unit cell
+        dnx.draw_chimera(
+            H, 
+            node_color='b', 
+            node_shape='*', 
+            style='dashed', 
+            edge_color='b', 
+            width=3, 
+            ax=ax, 
+            label='Input Graph'
+        )
+
+        # Add title if provided
+        if title:
+            ax.set_title(title)
+
+        # Display the legend
+        ax.legend(loc='best')
+        plt.show()
+    #elif topology == 'pegasus':
+
+    #elif topology == 'zerphyr':
+
+    else:
+        raise ValueError(f"Topology '{topology}' not supported. Only 'chimera' is available.")
+   
+def visualize_chimera_graph(H, title="Chimera Graph"):
+    """
+    Visualizes a Chimera graph using dwave_networkx's Chimera layout.
+
+    Parameters:
+    - H (networkx.Graph): The Chimera graph to visualize.
+    - title (str): Title of the plot.
+    """
+    pos = dnx.chimera_layout(H)
+    
+    # Create a matplotlib figure and axis
+    fig, ax = plt.subplots(figsize=(8, 6))
+    
+    # Draw the Chimera unit cell in red
+    G = dnx.chimera_graph(1, 1, 4)  # Adjust parameters as needed
+    dnx.draw_chimera(G, node_color='r', ax=ax, label='Unit Cell')
+    
+    # if not three type, call nwx draw nwx
+    # match the node color and edge color according to diff embeddings. background gray corresponds for unused embeddings
+    # Draw the input Chimera graph in blue with specific styles
+    dnx.draw_chimera(
+        H, 
+        node_color='b', 
+        node_shape='*', 
+        style='dashed', 
+        edge_color='b', 
+        width=3, 
+        ax=ax, 
+        label='Input Graph'
+    )
+    
+    # Add title and legend
+    plt.title(title)
+    plt.legend()
+    
+    # Display the plot
+    plt.show()
 def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf')):
     """Finds multiple disjoint embeddings of a source graph onto a target graph
 
@@ -279,6 +370,8 @@ def embeddings_to_ndarray(embs, node_order=None):
 
 if __name__ == "__main__":
     print(' min raster scale examples ')
+
+    # Define the Graph Topologies, Tiles, and Generators
     topologies = ['chimera', 'pegasus', 'zephyr']
     smallest_tile = {'chimera': 1,
                      'pegasus': 2,
@@ -286,9 +379,15 @@ if __name__ == "__main__":
     generators = {'chimera': dnx.chimera_graph,
                   'pegasus': dnx.pegasus_graph,
                   'zephyr': dnx.zephyr_graph}
+    
+    # Iterate over Topologies for Raster Embedding Checks
     for stopology in topologies:
         raster_breadth_S = smallest_tile[stopology] + 1
         S = generators[stopology](raster_breadth_S)
+
+        if stopology == 'chimera':
+                visualize_embeddings(S, topology=stopology, title=f'{stopology.capitalize()} Embedding')
+        # For each target topology, checks whether embedding the graph S into that topology is feasible
         for ttopology in topologies:
             raster_breadth = raster_breadth_subgraph_lower_bound(
                 S, topology=ttopology)
@@ -319,6 +418,8 @@ if __name__ == "__main__":
 
         print()
         print(topology)
+        
+        # Perform Embedding Search and Validation
         embs = raster_embedding_search(S, T, raster_breadth=min_raster_scale)
         print(f'{len(embs)} Independent embeddings by rastering')
         print(embs)
