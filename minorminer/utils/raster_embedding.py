@@ -19,7 +19,7 @@ import warnings
 import matplotlib.pyplot as plt
 from minorminer.subgraph import find_subgraph
 
-def visualize_embeddings(H, topology='chimera', title=None, graph_size=(1, 1, 4)):
+def visualize_embeddings(H, topology='chimera', title=None):
     """
     Visualizes the embeddings produced using dwave_networkx's layout 
     according to the specified topology.
@@ -38,6 +38,7 @@ def visualize_embeddings(H, topology='chimera', title=None, graph_size=(1, 1, 4)
     """
 
     if topology == 'chimera':
+        graph_size=(1, 1, 4)
         # Set up the figure and axis
         fig, ax = plt.subplots(figsize=(8, 6))
         
@@ -66,8 +67,28 @@ def visualize_embeddings(H, topology='chimera', title=None, graph_size=(1, 1, 4)
         # Display the legend
         ax.legend(loc='best')
         plt.show()
-    #elif topology == 'pegasus':
+    elif topology == 'pegasus':
+        fig, ax = plt.subplots(figsize=(8,6))
 
+        G = dnx.pegasus_graph(2)
+
+        dnx.draw_pegasus(G, with_labels=True, crosses=True, node_color="Yellow", ax=ax)
+
+        dnx.draw_pegasus(
+            H, 
+            crosses=True, 
+            node_color='b', 
+            style='dashed',
+            edge_color='b', 
+            width=3, 
+            ax=ax
+        )
+
+        if title:
+            ax.set_title(title)
+        
+        ax.legend(loc='best')
+        plt.show()
     #elif topology == 'zerphyr':
 
     else:
@@ -385,7 +406,7 @@ if __name__ == "__main__":
         raster_breadth_S = smallest_tile[stopology] + 1
         S = generators[stopology](raster_breadth_S)
 
-        if stopology == 'chimera':
+        if stopology == 'chimera' or stopology == 'pegasus':
                 visualize_embeddings(S, topology=stopology, title=f'{stopology.capitalize()} Embedding')
         # For each target topology, checks whether embedding the graph S into that topology is feasible
         for ttopology in topologies:
