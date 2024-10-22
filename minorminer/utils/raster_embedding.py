@@ -202,14 +202,17 @@ def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
     if T.graph.get('family') == 'chimera':
         sublattice_mappings = dnx.chimera_sublattice_mappings
         t = T.graph['tile']
-        tile = dnx.chimera_graph(m=raster_breadth, n=raster_breadth, t=t)
+        if tile is None:
+            tile = dnx.chimera_graph(m=raster_breadth, n=raster_breadth, t=t)
     elif T.graph.get('family') == 'pegasus':
         sublattice_mappings = dnx.pegasus_sublattice_mappings
-        tile = dnx.pegasus_graph(m=raster_breadth)
+        if tile is None:
+            tile = dnx.pegasus_graph(m=raster_breadth)
     elif T.graph.get('family') == 'zephyr':
         sublattice_mappings = dnx.zephyr_sublattice_mappings
         t = T.graph['tile']
-        tile = dnx.zephyr_graph(m=raster_breadth, t=t)
+        if tile is None:
+            tile = dnx.zephyr_graph(m=raster_breadth, t=t)
     else:
         raise ValueError("source graphs must a Zephyr graph constructed by "
                          "dwave_networkx as chimera, pegasus or zephyr type")
