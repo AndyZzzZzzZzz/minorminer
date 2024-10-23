@@ -188,8 +188,8 @@ def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
             Defaults to inf (unbounded).
         tile (networkx.Graph, optional): 
             A subgraph representing a fundamental unit (tile) of the target graph `T` used for embedding. 
-            If not specified, the tile is automatically generated based on the `raster_breadth` and the 
-            family of `T` (chimera, pegasus, or zephyr). Defaults to None.
+            If none provided, the tile is automatically generated based on the `raster_breadth` and the 
+            family of `T` (chimera, pegasus, or zephyr). 
     Returns:
         list: A list of disjoint embeddings.
     """
