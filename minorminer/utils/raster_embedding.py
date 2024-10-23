@@ -32,53 +32,84 @@ def visualize_embeddings(H, topology=None, title=None):
         The type of topology for visualization. 
     title : str, optional
         Title of the plot. Defaults to None.
-
     """
-    fig, ax = plt.subplots(figsize=(8, 6))
-    if topology == 'chimera':
-        graph_size=(1, 1, 4)
-        G = dnx.chimera_graph(*graph_size)  
-        dnx.draw_chimera(G, node_color='r', ax=ax, label='Unit Cell')
-
-        # Draw the input graph on top of the unit cell
-        dnx.draw_chimera(
-            H, 
-            node_color='b', 
-            node_shape='*', 
-            style='dashed', 
-            edge_color='b', 
-            width=3, 
-            ax=ax, 
-            label='Input Graph'
-        )
-    elif topology == 'pegasus':
-        G = dnx.pegasus_graph(2)
-        dnx.draw_pegasus(G, with_labels=True, crosses=True, node_color="Yellow", ax=ax)
-
-        dnx.draw_pegasus(
-            H, 
-            crosses=True, 
-            node_color='b', 
-            style='dashed',
-            edge_color='b', 
-            width=3, 
-            ax=ax
-        )
-    elif topology == 'zephyr':
-        G = dnx.zephyr_graph(1)  # Adjust size as needed
-        dnx.draw_zephyr(G, ax=ax, node_color='r', label='Unit Cell')
-
-        # Overlay the input graph H on the Zephyr topology
-        dnx.draw_zephyr(H, ax=ax, node_color='b', style='dashed',
-                        edge_color='b', width=3)
-
-    else:
+    if topology not in ['chimera', 'pegasus', 'zephyr']:
         raise ValueError(f"Topology '{topology}' not recognized. "
                          "Use 'chimera', 'pegasus', or 'zephyr'.")
+
+    fig, ax = plt.subplots(figsize=(10, 8))
     
+    # Define topology-specific parameters
+    if topology == 'chimera':
+        graph_size = (1, 1, 4) 
+        G = dnx.chimera_graph(*graph_size)
+    elif topology == 'pegasus':
+        G = dnx.pegasus_graph(2) 
+    elif topology == 'zephyr':
+        G = dnx.zephyr_graph(1)
+    
+    # Combine the base graph G and input graph H
+    combined_graph = nx.compose(G, H)
+    
+    # Create node color mapping
+    node_color_map = []
+    for node in combined_graph.nodes():
+        if node in G.nodes():
+            node_color_map.append('red')  
+        else:
+            node_color_map.append('blue') 
+    
+    # Create edge color mapping
+    edge_color_map = []
+    for edge in combined_graph.edges():
+        if edge in G.edges() or (edge[1], edge[0]) in G.edges():
+            edge_color_map.append('black') 
+        else:
+            edge_color_map.append('blue') 
+    
+    # Draw the combined graph with color mappings
+    if topology == 'chimera':
+        dnx.draw_chimera(
+            combined_graph, 
+            node_color=node_color_map, 
+            edge_color=edge_color_map, 
+            node_shape='o', 
+            ax=ax, 
+            with_labels=False,
+            width=1
+        )
+    elif topology == 'pegasus':
+        dnx.draw_pegasus(
+            combined_graph, 
+            node_color=node_color_map, 
+            edge_color=edge_color_map, 
+            node_shape='o', 
+            ax=ax, 
+            with_labels=False,
+            crosses=True,
+            width=1
+        )
+    elif topology == 'zephyr':
+        dnx.draw_zephyr(
+            combined_graph, 
+            node_color=node_color_map, 
+            edge_color=edge_color_map, 
+            node_shape='o', 
+            ax=ax, 
+            with_labels=False,
+            width=1
+        )
+    
+    # Set title if provided
     if title:
         ax.set_title(title)
-    ax.legend(loc='best')
+    
+    # Create a custom legend
+    import matplotlib.patches as mpatches
+    red_patch = mpatches.Patch(color='red', label='Topology Nodes')
+    blue_patch = mpatches.Patch(color='blue', label='Input Graph Nodes')
+    ax.legend(handles=[red_patch, blue_patch], loc='best')
+    
     plt.show()
 
 def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf')):
