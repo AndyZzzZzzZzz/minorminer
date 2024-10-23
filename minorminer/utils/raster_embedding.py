@@ -360,6 +360,8 @@ def embeddings_to_ndarray(embs, node_order=None):
 
 if __name__ == "__main__":
     print(' min raster scale examples ')
+
+    # Define the Graph Topologies, Tiles, and Generators
     topologies = ['chimera', 'pegasus', 'zephyr']
     smallest_tile = {'chimera': 1,
                      'pegasus': 2,
@@ -367,9 +369,14 @@ if __name__ == "__main__":
     generators = {'chimera': dnx.chimera_graph,
                   'pegasus': dnx.pegasus_graph,
                   'zephyr': dnx.zephyr_graph}
+    
+    # Iterate over Topologies for Raster Embedding Checks
     for stopology in topologies:
         raster_breadth_S = smallest_tile[stopology] + 1
         S = generators[stopology](raster_breadth_S)
+
+        visualize_embeddings(S, topology=stopology, title=f'{stopology.capitalize()} Embedding')
+        # For each target topology, checks whether embedding the graph S into that topology is feasible
         for ttopology in topologies:
             raster_breadth = raster_breadth_subgraph_lower_bound(
                 S, topology=ttopology)
@@ -400,6 +407,8 @@ if __name__ == "__main__":
 
         print()
         print(topology)
+
+        # Perform Embedding Search and Validation
         embs = raster_embedding_search(S, T, raster_breadth=min_raster_scale)
         print(f'{len(embs)} Independent embeddings by rastering')
         print(embs)
