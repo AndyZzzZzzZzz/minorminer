@@ -16,9 +16,97 @@ import networkx as nx
 import dwave_networkx as dnx
 import numpy as np
 import warnings
+import matplotlib.pyplot as plt
 from minorminer.subgraph import find_subgraph
 
+def visualize_embeddings(H, topology=None, title=None):
+    """
+    Visualizes the embeddings produced using dwave_networkx's layout 
+    according to the specified topology.
 
+    Parameters:
+    -----------
+    H : networkx.Graph
+        Input graph to be visualized on the topology.
+    topology : str, optional
+        The type of topology for visualization. 
+    title : str, optional
+        Title of the plot. Defaults to None.
+
+    """
+
+    if topology == 'chimera':
+        graph_size=(1, 1, 4)
+        # Set up the figure and axis
+        fig, ax = plt.subplots(figsize=(8, 6))
+        
+        # Create the Chimera topology graph (adjust size as needed)
+        G = dnx.chimera_graph(*graph_size)  
+        
+        # Draw the base Chimera unit cell
+        dnx.draw_chimera(G, node_color='r', ax=ax, label='Unit Cell')
+
+        # Draw the input graph on top of the unit cell
+        dnx.draw_chimera(
+            H, 
+            node_color='b', 
+            node_shape='*', 
+            style='dashed', 
+            edge_color='b', 
+            width=3, 
+            ax=ax, 
+            label='Input Graph'
+        )
+
+        # Add title if provided
+        if title:
+            ax.set_title(title)
+
+        # Display the legend
+        ax.legend(loc='best')
+        plt.show()
+    elif topology == 'pegasus':
+        fig, ax = plt.subplots(figsize=(8,6))
+
+        G = dnx.pegasus_graph(2)
+
+        dnx.draw_pegasus(G, with_labels=True, crosses=True, node_color="Yellow", ax=ax)
+
+        dnx.draw_pegasus(
+            H, 
+            crosses=True, 
+            node_color='b', 
+            style='dashed',
+            edge_color='b', 
+            width=3, 
+            ax=ax
+        )
+
+        if title:
+            ax.set_title(title)
+        
+        ax.legend(loc='best')
+        plt.show()
+    elif topology == 'zephyr':
+        fig, ax = plt.subplots(figsize=(8, 6))
+
+        # Create and draw Zephyr graph
+        G = dnx.zephyr_graph(1)  # Adjust size as needed
+        dnx.draw_zephyr(G, ax=ax, node_color='r', label='Unit Cell')
+
+        # Overlay the input graph H on the Zephyr topology
+        dnx.draw_zephyr(H, ax=ax, node_color='b', style='dashed',
+                        edge_color='b', width=3)
+
+        if title:
+            ax.set_title(title)
+        ax.legend(loc='best')
+        plt.show()
+
+    else:
+        raise ValueError(f"Topology '{topology}' not recognized. "
+                         "Use 'chimera', 'pegasus', or 'zephyr'.")
+    
 def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf')):
     """Finds multiple disjoint embeddings of a source graph onto a target graph
 
