@@ -34,16 +34,10 @@ def visualize_embeddings(H, topology=None, title=None):
         Title of the plot. Defaults to None.
 
     """
-
+    fig, ax = plt.subplots(figsize=(8, 6))
     if topology == 'chimera':
         graph_size=(1, 1, 4)
-        # Set up the figure and axis
-        fig, ax = plt.subplots(figsize=(8, 6))
-        
-        # Create the Chimera topology graph (adjust size as needed)
         G = dnx.chimera_graph(*graph_size)  
-        
-        # Draw the base Chimera unit cell
         dnx.draw_chimera(G, node_color='r', ax=ax, label='Unit Cell')
 
         # Draw the input graph on top of the unit cell
@@ -57,19 +51,8 @@ def visualize_embeddings(H, topology=None, title=None):
             ax=ax, 
             label='Input Graph'
         )
-
-        # Add title if provided
-        if title:
-            ax.set_title(title)
-
-        # Display the legend
-        ax.legend(loc='best')
-        plt.show()
     elif topology == 'pegasus':
-        fig, ax = plt.subplots(figsize=(8,6))
-
         G = dnx.pegasus_graph(2)
-
         dnx.draw_pegasus(G, with_labels=True, crosses=True, node_color="Yellow", ax=ax)
 
         dnx.draw_pegasus(
@@ -81,16 +64,7 @@ def visualize_embeddings(H, topology=None, title=None):
             width=3, 
             ax=ax
         )
-
-        if title:
-            ax.set_title(title)
-        
-        ax.legend(loc='best')
-        plt.show()
     elif topology == 'zephyr':
-        fig, ax = plt.subplots(figsize=(8, 6))
-
-        # Create and draw Zephyr graph
         G = dnx.zephyr_graph(1)  # Adjust size as needed
         dnx.draw_zephyr(G, ax=ax, node_color='r', label='Unit Cell')
 
@@ -98,15 +72,15 @@ def visualize_embeddings(H, topology=None, title=None):
         dnx.draw_zephyr(H, ax=ax, node_color='b', style='dashed',
                         edge_color='b', width=3)
 
-        if title:
-            ax.set_title(title)
-        ax.legend(loc='best')
-        plt.show()
-
     else:
         raise ValueError(f"Topology '{topology}' not recognized. "
                          "Use 'chimera', 'pegasus', or 'zephyr'.")
     
+    if title:
+        ax.set_title(title)
+    ax.legend(loc='best')
+    plt.show()
+
 def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf')):
     """Finds multiple disjoint embeddings of a source graph onto a target graph
 
