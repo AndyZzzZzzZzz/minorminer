@@ -203,16 +203,17 @@ def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
             return []
     # A possible feature enhancement might allow for raster_breadth to be
     # replaced by raster shape.
-    if T.graph.get('family') == 'chimera':
+    family = T.graph.get('family') 
+    if family == 'chimera':
         sublattice_mappings = dnx.chimera_sublattice_mappings
         t = T.graph['tile']
         if tile is None:
             tile = dnx.chimera_graph(m=raster_breadth, n=raster_breadth, t=t)
-    elif T.graph.get('family') == 'pegasus':
+    elif family == 'pegasus':
         sublattice_mappings = dnx.pegasus_sublattice_mappings
         if tile is None:
             tile = dnx.pegasus_graph(m=raster_breadth)
-    elif T.graph.get('family') == 'zephyr':
+    elif family == 'zephyr':
         sublattice_mappings = dnx.zephyr_sublattice_mappings
         t = T.graph['tile']
         if tile is None:
