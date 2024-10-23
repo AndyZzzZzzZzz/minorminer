@@ -74,7 +74,7 @@ def visualize_embeddings(H, topology=None, title=None):
             node_color=node_color_map, 
             edge_color=edge_color_map, 
             node_shape='o', 
-            ax=ax, 
+            ax=ax,
             with_labels=False,
             width=1
         )
@@ -99,7 +99,8 @@ def visualize_embeddings(H, topology=None, title=None):
             with_labels=False,
             width=1
         )
-    
+    # Set axis to equal for correct aspect ratio
+    ax.set_aspect('equal')
     # Set title if provided
     if title:
         ax.set_title(title)
