@@ -23,28 +23,6 @@ import numpy as np
 
 from minorminer.subgraph import find_subgraph
 
-def float_to_color(value, cmap='viridis', vmin=0, vmax=1):
-    """
-    Chat GPT!
-    Map a float value to a color in a pyplot colorscheme.
-
-    Parameters
-    ----------
-    value : float
-        The float value to be mapped to a color.
-    cmap : str or Colormap, optional
-        The name of the colormap to use (default is 'viridis').
-
-    Returns
-    -------
-    color : tuple
-        RGB tuple representing the color corresponding to the value.
-    """
-    norm = plt.Normalize(vmin=vmin, vmax=vmax)  # Assuming values are normalized between 0 and 1
-    colormap = colormaps[cmap]
-    color = colormap(norm(value))
-    return color
-
 def visualize_embeddings(H, embeddings=None, title=None):
     """
     Visualizes the embeddings produced using dwave_networkx's layout.
@@ -58,14 +36,19 @@ def visualize_embeddings(H, embeddings=None, title=None):
     """
     fig, ax = plt.subplots(figsize=(10, 8))
 
-    cmap = lambda idx: float_to_color(idx, vmax=len(embs) - 1)
     # Create node color mapping
     node_color_dict = {q: 'grey' for q in H.nodes()}
-    node_color_dict.update({q: cmap(idx) for idx, emb in enumerate(embeddings) for q in emb.values()})
-    
+    if embeddings:
+        # Use a colormap from Matplotlib
+        cmap = plt.get_cmap('viridis')
+        norm = plt.Normalize(vmin=0, vmax=len(embeddings) - 1)
+        
+        for idx, emb in enumerate(embeddings):
+            color = cmap(norm(idx))
+            for q in emb.values():
+                node_color_dict[q] = color
 
     # Create edge color mapping
-    #edge_color_dict = {p: 'grey' for p: }
     edge_color_dict = {}
     for v1, v2 in H.edges():
         if node_color_dict[v1] == node_color_dict[v2]:
