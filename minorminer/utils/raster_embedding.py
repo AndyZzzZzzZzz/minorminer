@@ -45,7 +45,7 @@ def visualize_embeddings(H, embeddings=None, title=None, **kwargs):
 
     # Create node color mapping
     node_color_dict = {q: 'grey' for q in H.nodes()}
-    if embeddings:
+    if embeddings is not None:
         cmap = plt.get_cmap('viridis')
         norm = plt.Normalize(vmin=0, vmax=len(embeddings) - 1)
         node_color_dict.update({q: cmap(norm(idx)) for idx, emb in enumerate(embeddings) for q in emb.values()})
