@@ -23,7 +23,7 @@ import numpy as np
 
 from minorminer.subgraph import find_subgraph
 
-def visualize_embeddings(H, embeddings=None, title=None):
+def visualize_embeddings(H, embeddings=None, title=None, **kwargs):
     """
     Visualizes the embeddings produced using dwave_networkx's layout.
 
@@ -56,40 +56,26 @@ def visualize_embeddings(H, embeddings=None, title=None):
         else:
             edge_color_dict[(v1, v2)] = 'grey'
 
+    # Default drawing arguments
+    draw_kwargs = {
+        'G': H,
+        'node_color': [node_color_dict[q] for q in H.nodes()],
+        'edge_color': [edge_color_dict[e] for e in H.edges()],
+        'node_shape': 'o',
+        'ax': ax,
+        'with_labels': False,
+        'width': 1
+    }
+    
     # Infer topology from graph H
     topology = H.graph.get('family') 
     # Draw the combined graph with color mappings
     if topology == 'chimera':
-        dnx.draw_chimera(
-            H, 
-            node_color=[node_color_dict[q] for q in H.nodes()], 
-            edge_color=[edge_color_dict[e] for e in H.edges()], 
-            node_shape='o', 
-            ax=ax,
-            with_labels=False,
-            width=1
-        )
+        dnx.draw_chimera(**draw_kwargs)
     elif topology == 'pegasus':
-        dnx.draw_pegasus(
-            H, 
-            node_color=[node_color_dict[q] for q in H.nodes()], 
-            edge_color=[edge_color_dict[e] for e in H.edges()], 
-            node_shape='o', 
-            ax=ax, 
-            with_labels=False,
-            crosses=True,
-            width=1
-        )
+        dnx.draw_pegasus(**draw_kwargs, crosses=True)
     elif topology == 'zephyr':
-        dnx.draw_zephyr(
-            H, 
-            node_color=[node_color_dict[q] for q in H.nodes()], 
-            edge_color=[edge_color_dict[e] for e in H.edges()], 
-            node_shape='o', 
-            ax=ax, 
-            with_labels=False,
-            width=1
-        )
+        dnx.draw_zephyr(**draw_kwargs)
     else:
         pass 
       # Set axis to equal for correct aspect ratio
