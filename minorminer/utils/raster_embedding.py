@@ -16,10 +16,34 @@ import networkx as nx
 import dwave_networkx as dnx
 import numpy as np
 import warnings
+from matplotlib import colormaps 
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from minorminer.subgraph import find_subgraph
 
-def visualize_embeddings(H, topology=None, title=None):
+def float_to_color(value, cmap='viridis', vmin=0, vmax=1):
+    """
+    Chat GPT!
+    Map a float value to a color in a pyplot colorscheme.
+
+    Parameters
+    ----------
+    value : float
+        The float value to be mapped to a color.
+    cmap : str or Colormap, optional
+        The name of the colormap to use (default is 'viridis').
+
+    Returns
+    -------
+    color : tuple
+        RGB tuple representing the color corresponding to the value.
+    """
+    norm = plt.Normalize(vmin=vmin, vmax=vmax)  # Assuming values are normalized between 0 and 1
+    colormap = colormaps[cmap]
+    color = colormap(norm(value))
+    return color
+
+def visualize_embeddings(H, embeddings=None, topology=None, title=None):
     """
     Visualizes the embeddings produced using dwave_networkx's layout 
     according to the specified topology.
@@ -38,41 +62,28 @@ def visualize_embeddings(H, topology=None, title=None):
                          "Use 'chimera', 'pegasus', or 'zephyr'.")
 
     fig, ax = plt.subplots(figsize=(10, 8))
-    
-    # Define topology-specific parameters
-    if topology == 'chimera':
-        graph_size = (1, 1, 4) 
-        G = dnx.chimera_graph(*graph_size)
-    elif topology == 'pegasus':
-        G = dnx.pegasus_graph(2) 
-    elif topology == 'zephyr':
-        G = dnx.zephyr_graph(1)
-    
-    # Combine the base graph G and input graph H
-    combined_graph = nx.compose(G, H)
-    
+
+    cmap = lambda idx: float_to_color(idx, vmax=len(embs) - 1)
     # Create node color mapping
-    node_color_map = []
-    for node in combined_graph.nodes():
-        if node in G.nodes():
-            node_color_map.append('red')  
-        else:
-            node_color_map.append('blue') 
+    node_color_dict = {q: 'grey' for q in H.nodes()}
+    node_color_dict.update({q: cmap(idx) for idx, emb in enumerate(embeddings) for q in emb.values()})
     
+
     # Create edge color mapping
-    edge_color_map = []
-    for edge in combined_graph.edges():
-        if edge in G.edges() or (edge[1], edge[0]) in G.edges():
-            edge_color_map.append('black') 
+    #edge_color_dict = {p: 'grey' for p: }
+    edge_color_dict = {}
+    for v1, v2 in H.edges():
+        if node_color_dict[v1] == node_color_dict[v2]:
+            edge_color_dict[(v1, v2)] = node_color_dict[v1]
         else:
-            edge_color_map.append('blue') 
-    
+            edge_color_dict[(v1, v2)] = 'grey'
+
     # Draw the combined graph with color mappings
     if topology == 'chimera':
         dnx.draw_chimera(
-            combined_graph, 
-            node_color=node_color_map, 
-            edge_color=edge_color_map, 
+            H, 
+            node_color=[node_color_dict[q] for q in H.nodes()], 
+            edge_color=[edge_color_dict[e] for e in H.edges()], 
             node_shape='o', 
             ax=ax,
             with_labels=False,
@@ -80,9 +91,9 @@ def visualize_embeddings(H, topology=None, title=None):
         )
     elif topology == 'pegasus':
         dnx.draw_pegasus(
-            combined_graph, 
-            node_color=node_color_map, 
-            edge_color=edge_color_map, 
+            H, 
+            node_color=[node_color_dict[q] for q in H.nodes()], 
+            edge_color=[edge_color_dict[e] for e in H.edges()], 
             node_shape='o', 
             ax=ax, 
             with_labels=False,
@@ -91,22 +102,21 @@ def visualize_embeddings(H, topology=None, title=None):
         )
     elif topology == 'zephyr':
         dnx.draw_zephyr(
-            combined_graph, 
-            node_color=node_color_map, 
-            edge_color=edge_color_map, 
+            H, 
+            node_color=[node_color_dict[q] for q in H.nodes()], 
+            edge_color=[edge_color_dict[e] for e in H.edges()], 
             node_shape='o', 
             ax=ax, 
             with_labels=False,
             width=1
         )
-    # Set axis to equal for correct aspect ratio
+      # Set axis to equal for correct aspect ratio
     ax.set_aspect('equal')
     # Set title if provided
     if title:
         ax.set_title(title)
     
     # Create a custom legend
-    import matplotlib.patches as mpatches
     red_patch = mpatches.Patch(color='red', label='Topology Nodes')
     blue_patch = mpatches.Patch(color='blue', label='Input Graph Nodes')
     ax.legend(handles=[red_patch, blue_patch], loc='best')
@@ -381,7 +391,7 @@ if __name__ == "__main__":
         raster_breadth_S = smallest_tile[stopology] + 1
         S = generators[stopology](raster_breadth_S)
 
-        visualize_embeddings(S, topology=stopology, title=f'{stopology.capitalize()} Embedding')
+       
         # For each target topology, checks whether embedding the graph S into that topology is feasible
         for ttopology in topologies:
             raster_breadth = raster_breadth_subgraph_lower_bound(
@@ -423,6 +433,7 @@ if __name__ == "__main__":
         value_list = [v for emb in embs for v in emb.values()]
         assert len(set(value_list)) == len(value_list)
 
+        visualize_embeddings(T, embeddings=embs, topology=topology, title=f'{stopology.capitalize()} Embedding')
         embs = raster_embedding_search(S, T)
         print(f'{len(embs)} Independent embeddings by direct search')
         assert all(set(emb.keys()) == set(S.nodes()) for emb in embs)
