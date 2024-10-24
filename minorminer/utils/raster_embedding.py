@@ -64,8 +64,8 @@ def visualize_embeddings(H, embeddings=None, title=None, **kwargs):
         'with_labels': False,
         'width': 1
     }
+    draw_kwargs.update(kwargs)
     
-    # Infer topology from graph H
     topology = H.graph.get('family') 
     # Draw the combined graph with color mappings
     if topology == 'chimera':
@@ -76,9 +76,8 @@ def visualize_embeddings(H, embeddings=None, title=None, **kwargs):
         dnx.draw_zephyr(**draw_kwargs)
     else:
         pass 
-      # Set axis to equal for correct aspect ratio
+      
     ax.set_aspect('equal')
-    # Set title if provided
     if title:
         ax.set_title(title)
     
