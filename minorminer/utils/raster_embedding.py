@@ -56,7 +56,7 @@ def visualize_embeddings(H, embeddings=None, title=None, **kwargs):
         if node_color_dict[v1] == node_color_dict[v2]:
             edge_color_dict[(v1, v2)] = node_color_dict[v1]
         else:
-            edge_color_dict[(v1, v2)] = 'grey'
+            edge_color_dict[(v1, v2)] = 'lightgrey'
 
     # Default drawing arguments
     draw_kwargs = {
