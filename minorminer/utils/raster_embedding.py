@@ -46,14 +46,9 @@ def visualize_embeddings(H, embeddings=None, title=None, **kwargs):
     # Create node color mapping
     node_color_dict = {q: 'grey' for q in H.nodes()}
     if embeddings:
-        # Use a colormap from Matplotlib
         cmap = plt.get_cmap('viridis')
         norm = plt.Normalize(vmin=0, vmax=len(embeddings) - 1)
-        
-        for idx, emb in enumerate(embeddings):
-            color = cmap(norm(idx))
-            for q in emb.values():
-                node_color_dict[q] = color
+        node_color_dict.update({q: cmap(norm(idx)) for idx, emb in enumerate(embeddings) for q in emb.values()})
 
     # Create edge color mapping
     edge_color_dict = {}
