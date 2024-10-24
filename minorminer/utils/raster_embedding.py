@@ -43,24 +43,17 @@ def float_to_color(value, cmap='viridis', vmin=0, vmax=1):
     color = colormap(norm(value))
     return color
 
-def visualize_embeddings(H, embeddings=None, topology=None, title=None):
+def visualize_embeddings(H, embeddings=None, title=None):
     """
-    Visualizes the embeddings produced using dwave_networkx's layout 
-    according to the specified topology.
+    Visualizes the embeddings produced using dwave_networkx's layout.
 
     Parameters:
     -----------
     H : networkx.Graph
         Input graph to be visualized on the topology.
-    topology : str, optional
-        The type of topology for visualization. 
     title : str, optional
         Title of the plot. Defaults to None.
     """
-    if topology not in ['chimera', 'pegasus', 'zephyr']:
-        raise ValueError(f"Topology '{topology}' not recognized. "
-                         "Use 'chimera', 'pegasus', or 'zephyr'.")
-
     fig, ax = plt.subplots(figsize=(10, 8))
 
     cmap = lambda idx: float_to_color(idx, vmax=len(embs) - 1)
@@ -78,6 +71,8 @@ def visualize_embeddings(H, embeddings=None, topology=None, title=None):
         else:
             edge_color_dict[(v1, v2)] = 'grey'
 
+    # Infer topology from graph H
+    topology = H.graph.get('family') 
     # Draw the combined graph with color mappings
     if topology == 'chimera':
         dnx.draw_chimera(
@@ -110,6 +105,8 @@ def visualize_embeddings(H, embeddings=None, topology=None, title=None):
             with_labels=False,
             width=1
         )
+    else:
+        pass 
       # Set axis to equal for correct aspect ratio
     ax.set_aspect('equal')
     # Set title if provided
@@ -433,7 +430,7 @@ if __name__ == "__main__":
         value_list = [v for emb in embs for v in emb.values()]
         assert len(set(value_list)) == len(value_list)
 
-        visualize_embeddings(T, embeddings=embs, topology=topology, title=f'{stopology.capitalize()} Embedding')
+        visualize_embeddings(T, embeddings=embs, title=f'{stopology.capitalize()} Embedding')
         embs = raster_embedding_search(S, T)
         print(f'{len(embs)} Independent embeddings by direct search')
         assert all(set(emb.keys()) == set(S.nodes()) for emb in embs)
