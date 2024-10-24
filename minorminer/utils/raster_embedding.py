@@ -11,14 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import networkx as nx
-import dwave_networkx as dnx
-import numpy as np
 import warnings
-from matplotlib import colormaps 
-import matplotlib.pyplot as plt
+
+from matplotlib import colormaps
 import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
+
+import dwave_networkx as dnx
+import networkx as nx
+import numpy as np
+
 from minorminer.subgraph import find_subgraph
 
 def float_to_color(value, cmap='viridis', vmin=0, vmax=1):
