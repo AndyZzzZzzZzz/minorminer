@@ -41,13 +41,14 @@ def visualize_embeddings(H, embeddings=None, title=None, **kwargs):
         - General layouts: Falls back to networkx's `draw_networkx` for 
           graphs with unknown topology.
     """
-    fig, ax = plt.subplots(figsize=(10, 8))
-
+    fig = plt.gcf() 
+    ax = plt.gca()
+    fig.set_size_inches(10, 8)
+    
     # Create node color mapping
     node_color_dict = {q: 'grey' for q in H.nodes()}
     if embeddings is not None:
         cmap = plt.get_cmap("turbo")
-        cmap.set_bad("lightgrey")
         norm = plt.Normalize(vmin=0, vmax=len(embeddings) - 1)
         node_color_dict.update({q: cmap(norm(idx)) for idx, emb in enumerate(embeddings) for q in emb.values()})
 
