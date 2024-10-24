@@ -13,8 +13,6 @@
 # limitations under the License.
 import warnings
 
-from matplotlib import colormaps
-import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 
 import dwave_networkx as dnx
@@ -83,11 +81,6 @@ def visualize_embeddings(H, embeddings=None, title=None, **kwargs):
     # Set title if provided
     if title:
         ax.set_title(title)
-    
-    # Create a custom legend
-    red_patch = mpatches.Patch(color='red', label='Topology Nodes')
-    blue_patch = mpatches.Patch(color='blue', label='Input Graph Nodes')
-    ax.legend(handles=[red_patch, blue_patch], loc='best')
     
     plt.show()
 
