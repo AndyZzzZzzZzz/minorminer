@@ -13,9 +13,8 @@
 # limitations under the License.
 import warnings
 
-import matplotlib.pyplot as plt
-
 import dwave_networkx as dnx
+import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 
@@ -46,7 +45,7 @@ def visualize_embeddings(H, embeddings=None, title=None, **kwargs):
     fig.set_size_inches(10, 8)
     
     # Create node color mapping
-    node_color_dict = {q: 'grey' for q in H.nodes()}
+    node_color_dict = {q: float("nan") for q in H.nodes()}
     if embeddings is not None:
         cmap = plt.get_cmap("turbo")
         norm = plt.Normalize(vmin=0, vmax=len(embeddings) - 1)
