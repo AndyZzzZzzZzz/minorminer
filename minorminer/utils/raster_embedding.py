@@ -65,7 +65,7 @@ def visualize_embeddings(H, embeddings=None, title=None, **kwargs):
         'width': 1
     }
     draw_kwargs.update(kwargs)
-    
+
     topology = H.graph.get('family') 
     # Draw the combined graph with color mappings
     if topology == 'chimera':
@@ -75,7 +75,7 @@ def visualize_embeddings(H, embeddings=None, title=None, **kwargs):
     elif topology == 'zephyr':
         dnx.draw_zephyr(**draw_kwargs)
     else:
-        pass 
+        nx.draw_networkx(**draw_kwargs)
       
     ax.set_aspect('equal')
     if title:
