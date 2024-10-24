@@ -22,15 +22,24 @@ import numpy as np
 from minorminer.subgraph import find_subgraph
 
 def visualize_embeddings(H, embeddings=None, title=None, **kwargs):
-    """
-    Visualizes the embeddings produced using dwave_networkx's layout.
+    """Visualizes the embeddings using dwave_networkx's layout functions.
 
-    Parameters:
-    -----------
-    H : networkx.Graph
-        Input graph to be visualized on the topology.
-    title : str, optional
-        Title of the plot. Defaults to None.
+    Args:
+        H (networkx.Graph): The input graph to be visualized. If the graph 
+            represents a specialized topology, it must be constructed using 
+            dwave_networkx (e.g., chimera, pegasus, or zephyr graphs).
+        embeddings (list of dict, optional): A list of embeddings where each 
+            embedding is a dictionary mapping nodes of the source graph to 
+            nodes in the target graph. If not provided, only the graph `H` 
+            will be visualized without specific embeddings.
+        title (str, optional): Title of the plot. Defaults to None.
+            **kwargs: Additional keyword arguments passed to the drawing functions 
+            (e.g., node size, font size).
+    Draws:
+        - Specialized layouts: Uses dwave_networkx's `draw_chimera`, 
+          `draw_pegasus`, or `draw_zephyr` if the graph family is identified.
+        - General layouts: Falls back to networkx's `draw_networkx` for 
+          graphs with unknown topology.
     """
     fig, ax = plt.subplots(figsize=(10, 8))
 
