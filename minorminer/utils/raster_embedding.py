@@ -43,12 +43,12 @@ def visualize_embeddings(H, embeddings=None, title=None, **kwargs):
     fig = plt.gcf() 
     ax = plt.gca()
     fig.set_size_inches(10, 8)
-    
+    cmap = plt.get_cmap("turbo")
+    cmap.set_bad("lightgrey")
+
     # Create node color mapping
-    node_color_dict = {q: 'grey' for q in H.nodes()}
+    node_color_dict = {q: float("nan") for q in H.nodes()}
     if embeddings is not None:
-        cmap = plt.get_cmap("turbo")
-        norm = plt.Normalize(vmin=0, vmax=len(embeddings) - 1)
         node_color_dict.update(
             {q: idx for idx, emb in enumerate(embeddings, 1) for q in emb.values()}
         )
@@ -59,7 +59,7 @@ def visualize_embeddings(H, embeddings=None, title=None, **kwargs):
         if node_color_dict[v1] == node_color_dict[v2]:
             edge_color_dict[(v1, v2)] = node_color_dict[v1]
         else:
-            edge_color_dict[(v1, v2)] = 'lightgrey'
+            edge_color_dict[(v1, v2)] = float("nan")
 
     # Default drawing arguments
     draw_kwargs = {
@@ -69,7 +69,9 @@ def visualize_embeddings(H, embeddings=None, title=None, **kwargs):
         'node_shape': 'o',
         'ax': ax,
         'with_labels': False,
-        'width': 1
+        "width": 1,
+        "cmap": cmap,
+        "edge_cmap": cmap,
     }
     draw_kwargs.update(kwargs)
 
