@@ -45,11 +45,13 @@ def visualize_embeddings(H, embeddings=None, title=None, **kwargs):
     fig.set_size_inches(10, 8)
     
     # Create node color mapping
-    node_color_dict = {q: float("nan") for q in H.nodes()}
+    node_color_dict = {q: 'grey' for q in H.nodes()}
     if embeddings is not None:
         cmap = plt.get_cmap("turbo")
         norm = plt.Normalize(vmin=0, vmax=len(embeddings) - 1)
-        node_color_dict.update({q: cmap(norm(idx)) for idx, emb in enumerate(embeddings) for q in emb.values()})
+        node_color_dict.update(
+            {q: idx for idx, emb in enumerate(embeddings, 1) for q in emb.values()}
+        )
 
     # Create edge color mapping
     edge_color_dict = {}
