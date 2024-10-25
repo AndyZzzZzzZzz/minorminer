@@ -396,7 +396,7 @@ if __name__ == "__main__":
         value_list = [v for emb in embs for v in emb.values()]
         assert len(set(value_list)) == len(value_list)
 
-        visualize_embeddings(T, embeddings=embs, title=f'{stopology.capitalize()} Embedding')
+        visualize_embeddings(T, embeddings=embs)
         embs = raster_embedding_search(S, T)
         print(f'{len(embs)} Independent embeddings by direct search')
         assert all(set(emb.keys()) == set(S.nodes()) for emb in embs)
