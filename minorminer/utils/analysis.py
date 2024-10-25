@@ -10,8 +10,8 @@ import networkx as nx
 min_raster_breadth = {}     # Stores minimal raster breadth required for each (L, topology)
 time_required_many = {}     # Stores time required to find multiple embeddings
 time_required_1 = {}        # Stores time required to find one embedding
-num_embeddings_many = {}    # Stores number of embeddings found, 
-# add experiment number to dictionary keys, collect data for multiple experiments
+num_embeddings_many = {}    # Stores number of embeddings found
+successful_m_target = {}    # Stores minimal m_target for successful embedding
 
 timeout = 1 # Can make bigger when you gain confidence, but don't want to blow our time budget on hard cases.
 timeout_many = 60  # Maximum total time allowed for multiple embeddings
@@ -21,8 +21,6 @@ generator = {'chimera': dnx.chimera_graph, 'pegasus': dnx.pegasus_graph, 'zephyr
 max_processor_scale = {'chimera': 16, 'pegasus': 16, 'zephyr': 12}
 
 # Loops of length 4 to 2048 on exponential scale
-# To do : make the loop size equal to tile size, without needing to run min_raster_size
-# remove loop over L, line39 (range 1 - 16), set L equal to T.number of nodes, generate S after generating T
 Ls = 2**np.arange(4,12)  # Ls = [16, 32, 64, 128, 256, 512, 1024, 2048]
 
 for L in Ls:
@@ -42,7 +40,6 @@ for L in Ls:
 
             # Time to first valid embeddings
             t0 = perf_counter()
-            # To do: save time required one and time require many as a key, check before experiments
             embs = raster_embedding_search(S, T, raster_breadth=rb,
                                            max_num_emb=1, timeout=timeout)
             
@@ -51,13 +48,13 @@ for L in Ls:
                 time_required_1[(L, target_topology, m_target)] = float('Inf')
                 break  # No need to try larger m_target if embedding not possible
             else:
-                 # Embedding found, record time taken
+                # Embedding found, record time taken
                 time_required_1[(L, target_topology, m_target)] = perf_counter()-t0
+                # Record successful m_target
+                successful_m_target[(L, target_topology)] = m_target
                 break # Found an embedding; proceed to next L
 
         # Now search for multiple embeddings
-        # Note: could slow down the code, consider skipping
-        pass
         for m_target in range(rb, max_processor_scale[target_topology]): 
             T = generator[target_topology](m_target)  # Generate target topology graph T
 
@@ -79,6 +76,7 @@ for L in Ls:
             
             
 # Do something interesting with the data, maybe plot L versus time to embed 1 to start with:
+# Time (for finding one embeddings) vs length of the loop 
 for target_topology in target_topologies:
     times = []
     for L in Ls:
@@ -94,4 +92,22 @@ plt.xlabel('Length of loop, L')
 plt.title('Time to find one embedding for smallest viable raster (defect-free graph)')
 plt.legend()
 plt.show()
+plt.show()
+
+
+# minimal m_target that allowed a successful embedding vs length of loop
+for target_topology in target_topologies:
+    m_targets = []
+    for L in Ls:
+        m_target = successful_m_target.get((L, target_topology), np.nan)
+        m_targets.append(m_target)
+    plt.plot(Ls, m_targets, marker='o', label=f'{target_topology}')
+
+plt.ylabel('Minimal m_target for Successful Embedding')
+plt.xlabel('Length of Loop, L')
+plt.title('Minimal m_target Required vs. Loop Length L')
+plt.legend()
+plt.xscale('log')  # Since L varies exponentially
+plt.grid(True)
+plt.tight_layout()
 plt.show()
