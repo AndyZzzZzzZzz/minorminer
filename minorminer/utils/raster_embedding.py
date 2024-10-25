@@ -85,10 +85,6 @@ def visualize_embeddings(H, embeddings=None, title=None, **kwargs):
     else:
         nx.draw_networkx(**draw_kwargs)
       
-    if title:
-        ax.set_title(title)
-    
-    plt.show()
 
 def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf')):
     """Finds multiple disjoint embeddings of a source graph onto a target graph
