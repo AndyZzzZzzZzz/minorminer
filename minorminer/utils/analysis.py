@@ -10,8 +10,8 @@ import networkx as nx
 min_raster_breadth = {}     # Stores minimal raster breadth required for each (L, topology)
 time_required_many = {}     # Stores time required to find multiple embeddings
 time_required_1 = {}        # Stores time required to find one embedding
-num_embeddings_many = {}    # Stores number of embeddings found
-
+num_embeddings_many = {}    # Stores number of embeddings found, 
+# add experiment number to dictionary keys, collect data for multiple experiments
 
 timeout = 1 # Can make bigger when you gain confidence, but don't want to blow our time budget on hard cases.
 timeout_many = 60  # Maximum total time allowed for multiple embeddings
@@ -21,6 +21,8 @@ generator = {'chimera': dnx.chimera_graph, 'pegasus': dnx.pegasus_graph, 'zephyr
 max_processor_scale = {'chimera': 16, 'pegasus': 16, 'zephyr': 12}
 
 # Loops of length 4 to 2048 on exponential scale
+# To do : make the loop size equal to tile size, without needing to run min_raster_size
+# remove loop over L, line39 (range 1 - 16), set L equal to T.number of nodes, generate S after generating T
 Ls = 2**np.arange(4,12)  # Ls = [16, 32, 64, 128, 256, 512, 1024, 2048]
 
 for L in Ls:
@@ -40,6 +42,7 @@ for L in Ls:
 
             # Time to first valid embeddings
             t0 = perf_counter()
+            # To do: save time required one and time require many as a key, check before experiments
             embs = raster_embedding_search(S, T, raster_breadth=rb,
                                            max_num_emb=1, timeout=timeout)
             
@@ -53,6 +56,8 @@ for L in Ls:
                 break # Found an embedding; proceed to next L
 
         # Now search for multiple embeddings
+        # Note: could slow down the code, consider skipping
+        pass
         for m_target in range(rb, max_processor_scale[target_topology]): 
             T = generator[target_topology](m_target)  # Generate target topology graph T
 
