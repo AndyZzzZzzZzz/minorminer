@@ -11,13 +11,79 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import networkx as nx
-import dwave_networkx as dnx
-import numpy as np
 import warnings
+
+import dwave_networkx as dnx
+import matplotlib.pyplot as plt
+import networkx as nx
+import numpy as np
+
 from minorminer.subgraph import find_subgraph
 
+def visualize_embeddings(H, embeddings=None, **kwargs):
+    """Visualizes the embeddings using dwave_networkx's layout functions.
+
+    Args:
+        H (networkx.Graph): The input graph to be visualized. If the graph 
+            represents a specialized topology, it must be constructed using 
+            dwave_networkx (e.g., chimera, pegasus, or zephyr graphs).
+        embeddings (list of dict, optional): A list of embeddings where each 
+            embedding is a dictionary mapping nodes of the source graph to 
+            nodes in the target graph. If not provided, only the graph `H` 
+            will be visualized without specific embeddings.
+        **kwargs: Additional keyword arguments passed to the drawing functions 
+            (e.g., node size, font size).
+    Draws:
+        - Specialized layouts: Uses dwave_networkx's `draw_chimera`, 
+          `draw_pegasus`, or `draw_zephyr` if the graph family is identified.
+        - General layouts: Falls back to networkx's `draw_networkx` for 
+          graphs with unknown topology.
+    """
+    fig = plt.gcf() 
+    ax = plt.gca()
+    cmap = plt.get_cmap("turbo")
+    cmap.set_bad("lightgrey")
+
+    # Create node color mapping
+    node_color_dict = {q: float("nan") for q in H.nodes()}
+    if embeddings is not None:
+        node_color_dict.update(
+            {q: idx for idx, emb in enumerate(embeddings, 1) for q in emb.values()}
+        )
+
+    # Create edge color mapping
+    edge_color_dict = {}
+    for v1, v2 in H.edges():
+        if node_color_dict[v1] == node_color_dict[v2]:
+            edge_color_dict[(v1, v2)] = node_color_dict[v1]
+        else:
+            edge_color_dict[(v1, v2)] = float("nan")
+
+    # Default drawing arguments
+    draw_kwargs = {
+        'G': H,
+        'node_color': [node_color_dict[q] for q in H.nodes()],
+        'edge_color': [edge_color_dict[e] for e in H.edges()],
+        'node_shape': 'o',
+        'ax': ax,
+        'with_labels': False,
+        'width': 1,
+        'cmap': cmap,
+        'edge_cmap': cmap,
+    }
+    draw_kwargs.update(kwargs)
+
+    topology = H.graph.get('family') 
+    # Draw the combined graph with color mappings
+    if topology == 'chimera':
+        dnx.draw_chimera(**draw_kwargs)
+    elif topology == 'pegasus':
+        dnx.draw_pegasus(**draw_kwargs, crosses=True)
+    elif topology == 'zephyr':
+        dnx.draw_zephyr(**draw_kwargs)
+    else:
+        nx.draw_networkx(**draw_kwargs)
+      
 
 def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf')):
     """Finds multiple disjoint embeddings of a source graph onto a target graph
@@ -272,6 +338,8 @@ def embeddings_to_ndarray(embs, node_order=None):
 
 if __name__ == "__main__":
     print(' min raster scale examples ')
+
+    # Define the Graph Topologies, Tiles, and Generators
     topologies = ['chimera', 'pegasus', 'zephyr']
     smallest_tile = {'chimera': 1,
                      'pegasus': 2,
@@ -279,9 +347,14 @@ if __name__ == "__main__":
     generators = {'chimera': dnx.chimera_graph,
                   'pegasus': dnx.pegasus_graph,
                   'zephyr': dnx.zephyr_graph}
+    
+    # Iterate over Topologies for Raster Embedding Checks
     for stopology in topologies:
         raster_breadth_S = smallest_tile[stopology] + 1
         S = generators[stopology](raster_breadth_S)
+
+       
+        # For each target topology, checks whether embedding the graph S into that topology is feasible
         for ttopology in topologies:
             raster_breadth = raster_breadth_subgraph_lower_bound(
                 S, topology=ttopology)
@@ -312,6 +385,8 @@ if __name__ == "__main__":
 
         print()
         print(topology)
+
+        # Perform Embedding Search and Validation
         embs = raster_embedding_search(S, T, raster_breadth=min_raster_scale)
         print(f'{len(embs)} Independent embeddings by rastering')
         print(embs)
@@ -320,6 +395,7 @@ if __name__ == "__main__":
         value_list = [v for emb in embs for v in emb.values()]
         assert len(set(value_list)) == len(value_list)
 
+        visualize_embeddings(T, embeddings=embs)
         embs = raster_embedding_search(S, T)
         print(f'{len(embs)} Independent embeddings by direct search')
         assert all(set(emb.keys()) == set(S.nodes()) for emb in embs)
