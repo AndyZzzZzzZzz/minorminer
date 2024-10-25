@@ -31,7 +31,6 @@ def visualize_embeddings(H, embeddings=None, title=None, **kwargs):
             embedding is a dictionary mapping nodes of the source graph to 
             nodes in the target graph. If not provided, only the graph `H` 
             will be visualized without specific embeddings.
-        title (str, optional): Title of the plot. Defaults to None.
         **kwargs: Additional keyword arguments passed to the drawing functions 
             (e.g., node size, font size).
     Draws:
