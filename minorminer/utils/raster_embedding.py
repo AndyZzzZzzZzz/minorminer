@@ -69,9 +69,9 @@ def visualize_embeddings(H, embeddings=None, title=None, **kwargs):
         'node_shape': 'o',
         'ax': ax,
         'with_labels': False,
-        "width": 1,
-        "cmap": cmap,
-        "edge_cmap": cmap,
+        'width': 1,
+        'cmap': cmap,
+        'edge_cmap': cmap,
     }
     draw_kwargs.update(kwargs)
 
