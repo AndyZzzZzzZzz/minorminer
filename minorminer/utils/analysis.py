@@ -5,6 +5,9 @@ from time import perf_counter
 import matplotlib.pyplot as plt
 import numpy as np
 import networkx as nx 
+import random
+import pickle
+import os
 
 # data_containers, find some good ways to visualize the data!
 min_raster_breadth = {}     # Stores minimal raster breadth required for each (L, topology)
@@ -20,6 +23,9 @@ target_topologies = ['chimera', 'pegasus', 'zephyr']
 generator = {'chimera': dnx.chimera_graph, 'pegasus': dnx.pegasus_graph, 'zephyr': dnx.zephyr_graph}
 max_processor_scale = {'chimera': 16, 'pegasus': 16, 'zephyr': 12}
 
+# Data filename for saving/loading
+data_filename = 'embedding_data.pkl'
+
 # Loops of length 4 to 2048 on exponential scale
 Ls = 2**np.arange(4,12)  # Ls = [16, 32, 64, 128, 256, 512, 1024, 2048]
 
@@ -34,7 +40,7 @@ for L in Ls:
         min_raster_breadth[(L,target_topology)] = rb  # maybe try rb+1 as well?
 
         # Try increasing m_target to find embeddings (up to max_processor_scale)
-        for m_target in range(rb, 16):
+        for m_target in range(rb, max_processor_scale[target_topology]):
             # Generate target topology graph T
             T = generator[target_topology](m_target)
 
@@ -53,7 +59,7 @@ for L in Ls:
                 # Record successful m_target
                 successful_m_target[(L, target_topology)] = m_target
                 break # Found an embedding; proceed to next L
-
+        pass
         # Now search for multiple embeddings
         for m_target in range(rb, max_processor_scale[target_topology]): 
             T = generator[target_topology](m_target)  # Generate target topology graph T
@@ -99,7 +105,7 @@ plt.show()
 for target_topology in target_topologies:
     m_targets = []
     for L in Ls:
-        m_target = successful_m_target.get((L, target_topology), np.nan)
+        m_target = successful_m_target.get((L, target_topology), np.nan) + random.random()/8
         m_targets.append(m_target)
     plt.plot(Ls, m_targets, marker='o', label=f'{target_topology}')
 
@@ -111,3 +117,4 @@ plt.xscale('log')  # Since L varies exponentially
 plt.grid(True)
 plt.tight_layout()
 plt.show()
+
