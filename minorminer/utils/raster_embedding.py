@@ -42,7 +42,6 @@ def visualize_embeddings(H, embeddings=None, title=None, **kwargs):
     """
     fig = plt.gcf() 
     ax = plt.gca()
-    fig.set_size_inches(10, 8)
     cmap = plt.get_cmap("turbo")
     cmap.set_bad("lightgrey")
 
