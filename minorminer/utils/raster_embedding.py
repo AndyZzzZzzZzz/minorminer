@@ -86,7 +86,6 @@ def visualize_embeddings(H, embeddings=None, title=None, **kwargs):
     else:
         nx.draw_networkx(**draw_kwargs)
       
-    ax.set_aspect('equal')
     if title:
         ax.set_title(title)
     
