@@ -20,7 +20,7 @@ import numpy as np
 
 from minorminer.subgraph import find_subgraph
 
-def visualize_embeddings(H, embeddings=None, title=None, **kwargs):
+def visualize_embeddings(H, embeddings=None, **kwargs):
     """Visualizes the embeddings using dwave_networkx's layout functions.
 
     Args:
