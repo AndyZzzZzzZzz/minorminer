@@ -78,7 +78,7 @@ def visualize_embeddings(H, embeddings=None, **kwargs):
     if topology == 'chimera':
         dnx.draw_chimera(**draw_kwargs)
     elif topology == 'pegasus':
-        dnx.draw_pegasus(**draw_kwargs, crosses=True)
+        dnx.draw_pegasus(**draw_kwargs)
     elif topology == 'zephyr':
         dnx.draw_zephyr(**draw_kwargs)
     else:
