@@ -104,9 +104,15 @@ def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf')):
             from the source to the target in the form of a dictionary with no
             reusue of target variables.
     """
-    _T = T.copy()
     embs = []
-    while True and len(embs) < max_num_emb:
+    if max_num_emb == 1:
+        if subgraph_embedding_feasibility_filter(S, T):
+            emb = find_subgraph(S, _T, timeout=timeout, triggered_restarts=True)
+            embs.append(emb)
+        return embs
+            
+    _T = T.copy()
+    while len(embs) < max_num_emb:
         # A potential feature enhancement would be to allow different embedding
         # heuristics here, including those that are not 1:1
         
