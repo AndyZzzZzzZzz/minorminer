@@ -1,0 +1,149 @@
+{
+    "biclique": [
+        {
+            "shape": [
+                2,
+                5,
+                5
+            ],
+            "lower_bound": 2,
+            "time_elapsed": 0.0499464999884367
+        },
+        {
+            "shape": [
+                2,
+                6,
+                6
+            ],
+            "lower_bound": 2,
+            "time_elapsed": 0.06413216597866267
+        },
+        {
+            "shape": [
+                2,
+                7,
+                7
+            ],
+            "lower_bound": 2,
+            "time_elapsed": 0.6389478750061244
+        },
+        {
+            "shape": [
+                2,
+                8,
+                8
+            ],
+            "lower_bound": 2,
+            "time_elapsed": 0.8048134580021724
+        },
+        {
+            "shape": [
+                2,
+                9,
+                9
+            ],
+            "lower_bound": 2,
+            "time_elapsed": 0.07500883401371539
+        }
+    ],
+    "diamond": [
+        {
+            "shape": [
+                3,
+                3,
+                8
+            ],
+            "lower_bound": 2,
+            "time_elapsed": 0.04624162497930229
+        },
+        {
+            "shape": [
+                4,
+                4,
+                8
+            ],
+            "lower_bound": 2,
+            "time_elapsed": 0.04688337497645989
+        },
+        {
+            "shape": [
+                5,
+                5,
+                8
+            ],
+            "lower_bound": 3,
+            "time_elapsed": 0.17657366598723456
+        }
+    ],
+    "3ddimer": [
+        {
+            "shape": [
+                3,
+                2,
+                2
+            ],
+            "lower_bound": 2,
+            "time_elapsed": 0.04584516701288521
+        },
+        {
+            "shape": [
+                3,
+                2,
+                3
+            ],
+            "lower_bound": 2,
+            "time_elapsed": 0.20582554198335856
+        },
+        {
+            "shape": [
+                3,
+                3,
+                3
+            ],
+            "lower_bound": 3,
+            "time_elapsed": 0.7630119590321556
+        }
+    ],
+    "2d": [
+        {
+            "shape": [
+                4,
+                4
+            ],
+            "lower_bound": 2,
+            "time_elapsed": 0.04870137496618554
+        },
+        {
+            "shape": [
+                5,
+                5
+            ],
+            "lower_bound": 2,
+            "time_elapsed": 0.04866108298301697
+        },
+        {
+            "shape": [
+                6,
+                6
+            ],
+            "lower_bound": 2,
+            "time_elapsed": 0.07169537502340972
+        },
+        {
+            "shape": [
+                7,
+                7
+            ],
+            "lower_bound": 3,
+            "time_elapsed": 0.09647774999029934
+        },
+        {
+            "shape": [
+                8,
+                8
+            ],
+            "lower_bound": 3,
+            "time_elapsed": 0.2869817919563502
+        }
+    ]
+}

@@ -1,0 +1,133 @@
+{
+    "biclique": [
+        {
+            "shape": [
+                2,
+                5,
+                5
+            ],
+            "time_elapsed": 0.0027542499592527747
+        },
+        {
+            "shape": [
+                2,
+                6,
+                6
+            ],
+            "time_elapsed": "null"
+        },
+        {
+            "shape": [
+                2,
+                7,
+                7
+            ],
+            "time_elapsed": "null"
+        },
+        {
+            "shape": [
+                2,
+                8,
+                8
+            ],
+            "time_elapsed": "null"
+        },
+        {
+            "shape": [
+                2,
+                9,
+                9
+            ],
+            "time_elapsed": "null"
+        }
+    ],
+    "diamond": [
+        {
+            "shape": [
+                3,
+                3,
+                8
+            ],
+            "time_elapsed": 0.0017637499840930104
+        },
+        {
+            "shape": [
+                4,
+                4,
+                8
+            ],
+            "time_elapsed": "null"
+        },
+        {
+            "shape": [
+                5,
+                5,
+                8
+            ],
+            "time_elapsed": 0.2574815000407398
+        }
+    ],
+    "3ddimer": [
+        {
+            "shape": [
+                3,
+                2,
+                2
+            ],
+            "time_elapsed": 0.016119834035634995
+        },
+        {
+            "shape": [
+                3,
+                2,
+                3
+            ],
+            "time_elapsed": "null"
+        },
+        {
+            "shape": [
+                3,
+                3,
+                3
+            ],
+            "time_elapsed": "null"
+        }
+    ],
+    "2d": [
+        {
+            "shape": [
+                4,
+                4
+            ],
+            "time_elapsed": 0.0011563750449568033
+        },
+        {
+            "shape": [
+                5,
+                5
+            ],
+            "time_elapsed": 0.10008550004567951
+        },
+        {
+            "shape": [
+                6,
+                6
+            ],
+            "time_elapsed": "null"
+        },
+        {
+            "shape": [
+                7,
+                7
+            ],
+            "time_elapsed": 0.03456516598816961
+        },
+        {
+            "shape": [
+                8,
+                8
+            ],
+            "time_elapsed": 1.1114999169949442
+        }
+    ]
+}
