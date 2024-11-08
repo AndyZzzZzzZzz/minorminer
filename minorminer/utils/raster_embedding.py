@@ -85,7 +85,7 @@ def visualize_embeddings(H, embeddings=None, **kwargs):
         nx.draw_networkx(**draw_kwargs)
       
 
-def find_multiple_embeddings(S, T, timeout=10, max_num_emb=1):
+def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf'), inplace=True):
     """Finds multiple disjoint embeddings of a source graph onto a target graph
 
     Uses a greedy strategy to deterministically find multiple disjoint
@@ -105,7 +105,7 @@ def find_multiple_embeddings(S, T, timeout=10, max_num_emb=1):
             reusue of target variables.
     """
     embs = []
-    if max_num_emb == 1:
+    if inplace:
         _T = T
         if subgraph_embedding_feasibility_filter(S, T):
             emb = find_subgraph(S, _T, timeout=timeout, triggered_restarts=True)
