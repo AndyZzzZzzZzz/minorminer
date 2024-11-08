@@ -242,7 +242,7 @@ def raster_breadth_subgraph_lower_bound(S, T=None, topology=None, t=None):
     return raster_breadth
 
 def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
-                            max_num_emb=float('Inf'), tile=None):
+                            max_num_emb=float('Inf'), tile=None, inplace=True):
     """Searches for multiple embeddings within a rastered target graph.
 
     Args:
@@ -295,24 +295,36 @@ def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
         raise ValueError("source graphs must a graph constructed by "
                          "dwave_networkx as chimera, pegasus or zephyr type")
 
-    _T = T.copy()
     embs = []
-    for i, f in enumerate(sublattice_mappings(tile, _T)):
-        Tr = _T.subgraph([f(n) for n in tile])
+    if inplace:
+        _T = T
+        for i, f in enumerate(sublattice_mappings(tile, _T)):
+            Tr = _T.subgraph([f(n) for n in tile])
 
-        sub_embs = find_multiple_embeddings(
-            S, Tr,
-            max_num_emb=max_num_emb,
-            timeout=timeout)
-        embs += sub_embs
-        if len(embs) >= max_num_emb:
+            sub_embs = find_multiple_embeddings(
+                S, Tr,
+                max_num_emb=max_num_emb,
+                timeout=timeout)
+            embs += sub_embs
             break
+    else:
+        _T = T.copy()
+        for i, f in enumerate(sublattice_mappings(tile, _T)):
+            Tr = _T.subgraph([f(n) for n in tile])
 
-        for emb in sub_embs:
-            # A potential feature extension would be to generate many
-            # overlapping embeddings and solve an independent set problem. This
-            # may allow additional parallel embeddings.
-            _T.remove_nodes_from(emb.values())
+            sub_embs = find_multiple_embeddings(
+                S, Tr,
+                max_num_emb=max_num_emb,
+                timeout=timeout)
+            embs += sub_embs
+            if len(embs) >= max_num_emb:
+                break
+
+            for emb in sub_embs:
+                # A potential feature extension would be to generate many
+                # overlapping embeddings and solve an independent set problem. This
+                # may allow additional parallel embeddings.
+                _T.remove_nodes_from(emb.values())
 
     return embs
 
