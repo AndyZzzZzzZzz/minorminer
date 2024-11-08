@@ -54,16 +54,16 @@ def visualize_embeddings(H, embeddings=None, **kwargs):
     # Create edge color mapping
     edge_color_dict = {}
     for v1, v2 in H.edges():
-        if node_color_dict[v1] != node_color_dict[v2]:
-            edge_color_dict[(v1, v2)] = float("nan")
-        else:
+        if node_color_dict[v1] == node_color_dict[v2]:
             edge_color_dict[(v1, v2)] = node_color_dict[v1]
+        else:
+            edge_color_dict[(v1, v2)] = float("nan")
 
     # Default drawing arguments
     draw_kwargs = {
         'G': H,
         'node_color': [node_color_dict[q] for q in H.nodes()],
-        'edge_color': [edge_color_dict[e] for e in H.edges()],
+        'edge_color': "lightgrey",
         'node_shape': 'o',
         'ax': ax,
         'with_labels': False,
@@ -88,7 +88,7 @@ def visualize_embeddings(H, embeddings=None, **kwargs):
     else:
         pos = nx.spring_layout(H)
         nx.draw_networkx(**draw_kwargs)
-
+    
     # Recolor specific edges on top of the original graph
     highlight_edges = [e for e in H.edges() if not np.isnan(edge_color_dict[e])]
     highlight_colors = [edge_color_dict[e] for e in highlight_edges]
@@ -101,7 +101,7 @@ def visualize_embeddings(H, embeddings=None, **kwargs):
         width=1,
         edge_cmap=cmap,
         ax=ax)
-      
+    
 
 def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf')):
     """Finds multiple disjoint embeddings of a source graph onto a target graph
@@ -413,7 +413,9 @@ if __name__ == "__main__":
         value_list = [v for emb in embs for v in emb.values()]
         assert len(set(value_list)) == len(value_list)
 
+        plt.figure(figsize=(12, 12)) 
         visualize_embeddings(T, embeddings=embs)
+        plt.show()
         embs = raster_embedding_search(S, T)
         print(f'{len(embs)} Independent embeddings by direct search')
         assert all(set(emb.keys()) == set(S.nodes()) for emb in embs)
