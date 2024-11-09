@@ -85,7 +85,7 @@ def visualize_embeddings(H, embeddings=None, **kwargs):
         nx.draw_networkx(**draw_kwargs)
       
 
-def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf'), inplace=True):
+def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf'), inplace=True, skip_filter=True):
     """Finds multiple disjoint embeddings of a source graph onto a target graph
 
     Uses a greedy strategy to deterministically find multiple disjoint
@@ -107,7 +107,7 @@ def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf'), inplace
     embs = []
     if inplace:
         _T = T
-        if subgraph_embedding_feasibility_filter(S, T):
+        if skip_filter or subgraph_embedding_feasibility_filter(S, T):
             emb = find_subgraph(S, _T, timeout=timeout, triggered_restarts=True)
             embs.append(emb)
         return embs
@@ -117,7 +117,7 @@ def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf'), inplace
             # A potential feature enhancement would be to allow different embedding
             # heuristics here, including those that are not 1:1
             
-            if subgraph_embedding_feasibility_filter(S, T):
+            if skip_filter or subgraph_embedding_feasibility_filter(S, T):
                 emb = find_subgraph(S, _T, timeout=timeout, triggered_restarts=True)
             else:
                 emb = []
@@ -242,7 +242,7 @@ def raster_breadth_subgraph_lower_bound(S, T=None, topology=None, t=None):
     return raster_breadth
 
 def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
-                            max_num_emb=float('Inf'), tile=None, inplace=True):
+                            max_num_emb=float('Inf'), tile=None, inplace=True, skip_filter=True):
     """Searches for multiple embeddings within a rastered target graph.
 
     Args:
@@ -269,7 +269,8 @@ def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
     if raster_breadth is None:
         return find_multiple_embeddings(
             S, T, timeout=timeout, max_num_emb=max_num_emb)
-    else:
+    
+    if not skip_filter:
         feasibility_bound = raster_breadth_subgraph_lower_bound(S, T=T)
         if feasibility_bound is None or raster_breadth < feasibility_bound:
             warnings.warn('raster_breadth < lower bound')
@@ -304,7 +305,7 @@ def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
             sub_embs = find_multiple_embeddings(
                 S, Tr,
                 max_num_emb=max_num_emb,
-                timeout=timeout)
+                timeout=timeout, skip_filter=skip_filter)
             embs += sub_embs
             break
     else:
@@ -315,7 +316,7 @@ def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
             sub_embs = find_multiple_embeddings(
                 S, Tr,
                 max_num_emb=max_num_emb,
-                timeout=timeout)
+                timeout=timeout, skip_filter=skip_filter)
             embs += sub_embs
             if len(embs) >= max_num_emb:
                 break
