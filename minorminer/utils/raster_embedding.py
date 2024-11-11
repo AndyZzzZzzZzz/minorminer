@@ -99,6 +99,11 @@ def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf'), inplace
             Defaults to 10.
         max_num_emb (int, optional): Maximum number of embeddings to find.
             Defaults to inf (unbounded).
+        inplace (bool, optional): Specifies whether to remove visited nodes 
+            from the target graph. Defaults to False, which retains nodes, 
+            suitable for single embeddings. Set to True if searching for multiple embeddings.
+        skip_filter (bool, optional): Specifies whether to skip the subgraph 
+            lower bound filter. Defaults to True, meaning the filter is skipped.
     Returns:
         list: A list of disjoint embeddings. Each embedding defines a 1:1 map
             from the source to the target in the form of a dictionary with no
@@ -259,10 +264,15 @@ def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
             Defaults to 10.
         max_num_emb (int, optional): Maximum number of embeddings to find.
             Defaults to inf (unbounded).
-        tile (networkx.Graph, optional): 
-            A subgraph representing a fundamental unit (tile) of the target graph `T` used for embedding. 
-            If none provided, the tile is automatically generated based on the `raster_breadth` and the 
-            family of `T` (chimera, pegasus, or zephyr). 
+        tile (networkx.Graph, optional): A subgraph representing a fundamental 
+            unit (tile) of the target graph `T` used for embedding. If none 
+            provided, the tile is automatically generated based on the `raster_breadth`
+            and the family of `T` (chimera, pegasus, or zephyr). 
+        inplace (bool, optional): Specifies whether to remove visited nodes 
+            from the target graph. Defaults to False, which retains nodes, 
+            suitable for single embeddings. Set to True if searching for multiple embeddings.
+        skip_filter (bool, optional): Specifies whether to skip the subgraph 
+            lower bound filter. Defaults to True, meaning the filter is skipped.
     Returns:
         list: A list of disjoint embeddings.
     """
