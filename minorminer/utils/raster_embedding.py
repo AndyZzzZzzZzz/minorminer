@@ -29,14 +29,14 @@ def visualize_embeddings(H, embeddings=None, **kwargs):
             dwave_networkx (e.g., chimera, pegasus, or zephyr graphs).
         embeddings (list of dict, optional): A list of embeddings where each 
             embedding is a dictionary mapping nodes of the source graph to 
-            nodes in the target graph. If not provided, only the graph `H` 
+            nodes in the target graph. If not provided, only the graph H 
             will be visualized without specific embeddings.
         **kwargs: Additional keyword arguments passed to the drawing functions 
             (e.g., node size, font size).
     Draws:
-        - Specialized layouts: Uses dwave_networkx's `draw_chimera`, 
-          `draw_pegasus`, or `draw_zephyr` if the graph family is identified.
-        - General layouts: Falls back to networkx's `draw_networkx` for 
+        - Specialized layouts: Uses dwave_networkx's draw_chimera, 
+          draw_pegasus, or draw_zephyr if the graph family is identified.
+        - General layouts: Falls back to networkx's draw_networkx for 
           graphs with unknown topology.
     """
     fig = plt.gcf() 
@@ -63,27 +63,45 @@ def visualize_embeddings(H, embeddings=None, **kwargs):
     draw_kwargs = {
         'G': H,
         'node_color': [node_color_dict[q] for q in H.nodes()],
-        'edge_color': [edge_color_dict[e] for e in H.edges()],
+        'edge_color': "lightgrey",
         'node_shape': 'o',
         'ax': ax,
         'with_labels': False,
         'width': 1,
         'cmap': cmap,
         'edge_cmap': cmap,
+        'node_size': 300/np.sqrt(H.number_of_nodes())
     }
     draw_kwargs.update(kwargs)
 
     topology = H.graph.get('family') 
     # Draw the combined graph with color mappings
     if topology == 'chimera':
+        pos = dnx.chimera_layout(H)
         dnx.draw_chimera(**draw_kwargs)
     elif topology == 'pegasus':
-        dnx.draw_pegasus(**draw_kwargs, crosses=True)
+        pos = dnx.pegasus_layout(H)
+        dnx.draw_pegasus(**draw_kwargs)
     elif topology == 'zephyr':
+        pos = dnx.zephyr_layout(H)
         dnx.draw_zephyr(**draw_kwargs)
     else:
+        pos = nx.spring_layout(H)
         nx.draw_networkx(**draw_kwargs)
-      
+    
+    # Recolor specific edges on top of the original graph
+    highlight_edges = [e for e in H.edges() if not np.isnan(edge_color_dict[e])]
+    highlight_colors = [edge_color_dict[e] for e in highlight_edges]
+    
+    nx.draw_networkx_edges(
+        H,
+        pos=pos,
+        edgelist=highlight_edges,
+        edge_color=highlight_colors,
+        width=1,
+        edge_cmap=cmap,
+        ax=ax)
+    
 
 def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf'), inplace=True, skip_filter=True):
     """Finds multiple disjoint embeddings of a source graph onto a target graph
@@ -425,7 +443,9 @@ if __name__ == "__main__":
         value_list = [v for emb in embs for v in emb.values()]
         assert len(set(value_list)) == len(value_list)
 
+        plt.figure(figsize=(12, 12)) 
         visualize_embeddings(T, embeddings=embs)
+        plt.show()
         embs = raster_embedding_search(S, T)
         print(f'{len(embs)} Independent embeddings by direct search')
         assert all(set(emb.keys()) == set(S.nodes()) for emb in embs)
