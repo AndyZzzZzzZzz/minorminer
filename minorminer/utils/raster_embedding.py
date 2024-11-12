@@ -427,8 +427,8 @@ if __name__ == "__main__":
         assert len(set(value_list)) == len(value_list)
 
         plt.figure(figsize=(12, 12)) 
-        #visualize_embeddings(T, embeddings=embs)
-        #plt.show()
+        visualize_embeddings(T, embeddings=embs)
+        plt.show()
         embs = raster_embedding_search(S, T)
         print(f'{len(embs)} Independent embeddings by direct search')
         assert all(set(emb.keys()) == set(S.nodes()) for emb in embs)
