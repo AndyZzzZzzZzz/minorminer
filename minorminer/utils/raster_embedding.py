@@ -137,8 +137,10 @@ def find_multiple_embeddings(S, T, timeout=10, max_num_emb=1, skip_filter=True):
             emb = find_subgraph(S, _T, timeout=timeout, triggered_restarts=True)
         else:
             emb = []
-        if len(emb) == 0 or max_num_emb == 1:
+        if len(emb) == 0:
             break
+        elif max_num_emb == 1:
+            embs.append(emb)
         else:
             _T.remove_nodes_from(emb.values())
             embs.append(emb)
@@ -258,7 +260,7 @@ def raster_breadth_subgraph_lower_bound(S, T=None, topology=None, t=None):
     return raster_breadth
 
 def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
-                            max_num_emb=float('Inf'), tile=None, inplace=True, skip_filter=True):
+                            max_num_emb=1, tile=None, skip_filter=True):
     """Searches for multiple embeddings within a rastered target graph.
 
     Args:
@@ -279,9 +281,6 @@ def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
             unit (tile) of the target graph `T` used for embedding. If none 
             provided, the tile is automatically generated based on the `raster_breadth`
             and the family of `T` (chimera, pegasus, or zephyr). 
-        inplace (bool, optional): Specifies whether to remove visited nodes 
-            from the target graph. Defaults to False, which retains nodes, 
-            suitable for single embeddings. Set to True if searching for multiple embeddings.
         skip_filter (bool, optional): Specifies whether to skip the subgraph 
             lower bound filter. Defaults to True, meaning the filter is skipped.
     Returns:
@@ -318,34 +317,26 @@ def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
                          "dwave_networkx as chimera, pegasus or zephyr type")
 
     embs = []
-    if inplace:
+    if max_num_emb == 1:
         _T = T
-        for i, f in enumerate(sublattice_mappings(tile, _T)):
-            Tr = _T.subgraph([f(n) for n in tile])
-            sub_embs = find_multiple_embeddings(
-                S, Tr,
-                max_num_emb=max_num_emb,
-                timeout=timeout, skip_filter=skip_filter)
-            embs += sub_embs
-            break
     else:
         _T = T.copy()
-        for i, f in enumerate(sublattice_mappings(tile, _T)):
-            Tr = _T.subgraph([f(n) for n in tile])
+    for i, f in enumerate(sublattice_mappings(tile, _T)):
+        Tr = _T.subgraph([f(n) for n in tile])
 
-            sub_embs = find_multiple_embeddings(
-                S, Tr,
-                max_num_emb=max_num_emb,
-                timeout=timeout, skip_filter=skip_filter)
-            embs += sub_embs
-            if len(embs) >= max_num_emb:
-                break
+        sub_embs = find_multiple_embeddings(
+            S, Tr,
+            max_num_emb=max_num_emb,
+            timeout=timeout, skip_filter=skip_filter)
+        embs += sub_embs
+        if len(embs) >= max_num_emb:
+            break
 
-            for emb in sub_embs:
-                # A potential feature extension would be to generate many
-                # overlapping embeddings and solve an independent set problem. This
-                # may allow additional parallel embeddings.
-                _T.remove_nodes_from(emb.values())
+        for emb in sub_embs:
+            # A potential feature extension would be to generate many
+            # overlapping embeddings and solve an independent set problem. This
+            # may allow additional parallel embeddings.
+            _T.remove_nodes_from(emb.values())
 
     return embs
 
@@ -426,7 +417,7 @@ if __name__ == "__main__":
         print()
         print(topology)
         # Perform Embedding Search and Validation
-        embs = raster_embedding_search(S, T, raster_breadth=min_raster_scale, inplace= True)
+        embs = raster_embedding_search(S, T, raster_breadth=min_raster_scale)
         print(f'{len(embs)} Independent embeddings by rastering')
         print(embs)
         assert all(set(emb.keys()) == set(S.nodes()) for emb in embs)
