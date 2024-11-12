@@ -128,31 +128,25 @@ def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf'), inplace
             reusue of target variables.
     """
     embs = []
-    if max_num_emb != 1:
-        inplace = False
     if inplace:
         _T = T
-        if skip_filter or subgraph_embedding_feasibility_filter(S, T):
-            emb = find_subgraph(S, _T, timeout=timeout, triggered_restarts=True)
-            embs.append(emb)
-        return embs
     else:
         _T = T.copy()
-        max_num_emb = int(T.number_of_nodes()/S.number_of_nodes())
-        for _ in range(max_num_emb):
-            # A potential feature enhancement would be to allow different embedding
-            # heuristics here, including those that are not 1:1
-            
-            if skip_filter or subgraph_embedding_feasibility_filter(S, T):
-                emb = find_subgraph(S, _T, timeout=timeout, triggered_restarts=True)
-            else:
-                emb = []
-            if len(emb) == 0:
-                break
-            else:
-                _T.remove_nodes_from(emb.values())
-                embs.append(emb)
-        return embs
+    max_num_emb = int(T.number_of_nodes()/S.number_of_nodes())
+    for _ in range(max_num_emb):
+        # A potential feature enhancement would be to allow different embedding
+        # heuristics here, including those that are not 1:1
+        
+        if skip_filter or subgraph_embedding_feasibility_filter(S, T):
+            emb = find_subgraph(S, _T, timeout=timeout, triggered_restarts=True)
+        else:
+            emb = []
+        if len(emb) == 0:
+            break
+        else:
+            _T.remove_nodes_from(emb.values())
+            embs.append(emb)
+    return embs
 
 def subgraph_embedding_feasibility_filter(S, T):
     """ Feasibility filter for subgraph embedding.
