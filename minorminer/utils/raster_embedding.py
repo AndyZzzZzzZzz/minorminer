@@ -128,6 +128,7 @@ def find_multiple_embeddings(S, T, timeout=10, max_num_emb=1, skip_filter=True):
     if max_num_emb == 1:
         _T = T
     else:
+        max_num_emb = min(int(T.number_of_nodes()/S.number_of_nodes()), max_num_emb)
         _T = T.copy()
     for _ in range(max_num_emb):
         # A potential feature enhancement would be to allow different embedding
@@ -417,7 +418,7 @@ if __name__ == "__main__":
         print()
         print(topology)
         # Perform Embedding Search and Validation
-        embs = raster_embedding_search(S, T, raster_breadth=min_raster_scale)
+        embs = raster_embedding_search(S, T, raster_breadth=min_raster_scale, max_num_emb=float('inf'))
         print(f'{len(embs)} Independent embeddings by rastering')
         print(embs)
         assert all(set(emb.keys()) == set(S.nodes()) for emb in embs)
@@ -426,8 +427,8 @@ if __name__ == "__main__":
         assert len(set(value_list)) == len(value_list)
 
         plt.figure(figsize=(12, 12)) 
-        visualize_embeddings(T, embeddings=embs)
-        plt.show()
+        #visualize_embeddings(T, embeddings=embs)
+        #plt.show()
         embs = raster_embedding_search(S, T)
         print(f'{len(embs)} Independent embeddings by direct search')
         assert all(set(emb.keys()) == set(S.nodes()) for emb in embs)
