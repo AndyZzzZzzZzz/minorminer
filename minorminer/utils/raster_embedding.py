@@ -103,7 +103,7 @@ def visualize_embeddings(H, embeddings=None, **kwargs):
         ax=ax)
     
 
-def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf'), inplace=True, skip_filter=True):
+def find_multiple_embeddings(S, T, timeout=10, max_num_emb=1, skip_filter=True):
     """Finds multiple disjoint embeddings of a source graph onto a target graph
 
     Uses a greedy strategy to deterministically find multiple disjoint
@@ -117,9 +117,6 @@ def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf'), inplace
             Defaults to 10.
         max_num_emb (int, optional): Maximum number of embeddings to find.
             Defaults to inf (unbounded).
-        inplace (bool, optional): Specifies whether to remove visited nodes 
-            from the target graph. Defaults to False, which retains nodes, 
-            suitable for single embeddings. Set to True if searching for multiple embeddings.
         skip_filter (bool, optional): Specifies whether to skip the subgraph 
             lower bound filter. Defaults to True, meaning the filter is skipped.
     Returns:
@@ -128,11 +125,10 @@ def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf'), inplace
             reusue of target variables.
     """
     embs = []
-    if inplace:
+    if max_num_emb == 1:
         _T = T
     else:
         _T = T.copy()
-    max_num_emb = int(T.number_of_nodes()/S.number_of_nodes())
     for _ in range(max_num_emb):
         # A potential feature enhancement would be to allow different embedding
         # heuristics here, including those that are not 1:1
@@ -141,7 +137,7 @@ def find_multiple_embeddings(S, T, timeout=10, max_num_emb=float('inf'), inplace
             emb = find_subgraph(S, _T, timeout=timeout, triggered_restarts=True)
         else:
             emb = []
-        if len(emb) == 0:
+        if len(emb) == 0 or max_num_emb == 1:
             break
         else:
             _T.remove_nodes_from(emb.values())
@@ -326,7 +322,6 @@ def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
         _T = T
         for i, f in enumerate(sublattice_mappings(tile, _T)):
             Tr = _T.subgraph([f(n) for n in tile])
-
             sub_embs = find_multiple_embeddings(
                 S, Tr,
                 max_num_emb=max_num_emb,
@@ -430,9 +425,8 @@ if __name__ == "__main__":
 
         print()
         print(topology)
-
         # Perform Embedding Search and Validation
-        embs = raster_embedding_search(S, T, raster_breadth=min_raster_scale)
+        embs = raster_embedding_search(S, T, raster_breadth=min_raster_scale, inplace= True)
         print(f'{len(embs)} Independent embeddings by rastering')
         print(embs)
         assert all(set(emb.keys()) == set(S.nodes()) for emb in embs)
