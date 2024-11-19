@@ -175,6 +175,16 @@ def subgraph_embedding_feasibility_filter(S, T):
         else:
             return True
 
+def raster_breadth_subgraph_upper_bound(T=None):
+    """Determines a raster breadth upper bound for subgraph embedding.
+
+    Args:
+        T (networkx.Graph, optional): The target graph in which to embed. The
+            graph must be of type zephyr, pegasus or chimera and constructed by
+            dwave_networkx.
+    """
+    return max(T.graph.get('rows'), T.graph.get('columns'))
+
 def raster_breadth_subgraph_lower_bound(S, T=None, topology=None, t=None):
     """Determines a raster breadth lower bound for subgraph embedding.
 
