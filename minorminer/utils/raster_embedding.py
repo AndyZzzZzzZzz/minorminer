@@ -102,9 +102,19 @@ def visualize_embeddings(H, embeddings=None, **kwargs):
         edge_cmap=cmap,
         ax=ax)
 
+def shuffle_graph(T, prng):
+    """Shuffle the node and edge ordering of a networkx graph. """
+    nodes = list(T.nodes())
+    np.random.shuffle(nodes)
+    edges = list(T.edges())
+    np.random.shuffle(edges)
+    _T = nx.Graph()
+    _T.add_nodes_from(nodes)
+    _T.add_edges_from(edges)
+    return _T
 
 def find_multiple_embeddings(S, T, *, timeout=10, max_num_emb=1, skip_filter=True,
-                             prng=None, **embedder, **embedder_kwargs):
+                             prng=None, embedder=None, embedder_kwargs=None):
     """Finds multiple disjoint embeddings of a source graph onto a target graph
 
     Uses a greedy strategy to deterministically find multiple disjoint
@@ -140,28 +150,24 @@ def find_multiple_embeddings(S, T, *, timeout=10, max_num_emb=1, skip_filter=Tru
 
     if embedder is None:
         embedder = find_subgraph
-        embedder_kwargs = {triggered_restarts: True}
+        embedder_kwargs = {'triggered_restarts': True}
+    elif embedder_kwargs is None:
+        embedder_kwargs = {}
 
     if max_num_emb == 1 and prng is not None:
         _T = T
     else:
         max_num_emb = min(int(T.number_of_nodes()/S.number_of_nodes()), max_num_emb)
-        if prng is not None:
+        if prng is None:
             _T = T.copy()
         else:
-            nodes = np.random.shuffle(T.nodes())
-            edges = np.random.shufulle(T.edges())
-            _T = nx.Graph()
-            _T.add_nodes_from(nodes)
-            _T.add_edges_from(edges)
-    if prng is not None:
-        nodes = np.random.shuffle(T.nodes())
-        edges = np.random.shufulle(T.edges())
-        _S = nx.Graph()
-        _S.add_nodes_from(nodes)
-        _S.add_edges_from(edges)
-    else:
+            _T = shuffle_graph(T, prng)
+
+    if prng is None:
         _S = S
+    else:
+        _S = shuffle_graph(S, prng)
+
     for _ in range(max_num_emb):
         # A potential feature enhancement would be to allow different embedding
         # heuristics here, including those that are not 1:1
@@ -372,16 +378,19 @@ def raster_embedding_search(S, T, *, timeout=10, raster_breadth=None,
         raise ValueError("source graphs must a graph constructed by "
                          "dwave_networkx as chimera, pegasus or zephyr type")
 
-    if prng is not None:
-        sublattice_mappings = list(sublattice_mappings)
-        prng.shuffle(sublattice_mappings)
-
     embs = []
     if max_num_emb == 1 and prng is None:
         _T = T
     else:
         _T = T.copy()
-    for i, f in enumerate(sublattice_mappings(tile, _T)):
+
+    if prng is not None:
+        sublattice_iter = list(sublattice_mappings(tile, _T))
+        prng.shuffle(sublattice_iter)
+    else:
+        sublattice_iter = sublattice_mappings(tile, _T)
+
+    for i, f in enumerate(sublattice_iter):
         Tr = _T.subgraph([f(n) for n in tile])
 
         sub_embs = find_multiple_embeddings(
@@ -398,10 +407,10 @@ def raster_embedding_search(S, T, *, timeout=10, raster_breadth=None,
             # overlapping embeddings and solve an independent set problem. This
             # may allow additional parallel embeddings.
             if hasattr(next(iter(emb.items()))[1], '__iter__'):
-                _T.remove_nodes_from(emb.values())
-            else:
                 _T.remove_nodes_from([v for c in emb.values() for v in c])
-   
+            else:
+                _T.remove_nodes_from(emb.values())
+            
     return embs
 
 
@@ -442,7 +451,7 @@ if __name__ == "__main__":
     generators = {'chimera': dnx.chimera_graph,
                   'pegasus': dnx.pegasus_graph,
                   'zephyr': dnx.zephyr_graph}
-
+    
     # Iterate over Topologies for Raster Embedding Checks
     for stopology in topologies:
         raster_breadth_S = smallest_tile[stopology] + 1
