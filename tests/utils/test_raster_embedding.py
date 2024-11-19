@@ -8,6 +8,7 @@ import networkx as nx
 from itertools import product
 
 import dwave_networkx as dnx
+from minorminer import find_embedding
 from minorminer.utils.raster_embedding import (visualize_embeddings,
                                                shuffle_graph,
                                                find_multiple_embeddings,
@@ -89,6 +90,15 @@ class TestRasterEmbedding(unittest.TestCase):
                          'embeddings overlap')
         
     def testFindMultipleEmbeddingsAdvanced(self):
+        # timeout
+        m = 3  # Feasible, but takes significantly more than a second
+        S = dnx.chimera_graph(2*m)
+        T = dnx.zephyr_graph(m)
+        timeout = 1 # An unfortunate behaviour
+        embs = find_multiple_embeddings(S, T, timeout=timeout)
+        self.assertEqual(len(embs), 0)
+
+        # max_num_embs
         square = {((0, 0),(0, 1)),
                   ((0, 1),(1, 1)),
                   ((1, 1),(1, 0)),
@@ -102,7 +112,6 @@ class TestRasterEmbedding(unittest.TestCase):
         S = nx.from_edgelist(square)
         T = nx.from_edgelist(squares)
 
-        # max_num_embs
         embss = [find_multiple_embeddings(S, T, max_num_emb=mne) for mne in range(1, 4)]
         for mne in range(1,4):
             i = mne - 1
@@ -111,15 +120,20 @@ class TestRasterEmbedding(unittest.TestCase):
                 self.assertLessEqual(len(embss[i-1]), len(embss[i]))
                 # Should proceed deterministically, sequentially:
                 self.assertTrue(embs[i-1][idx] == emb[idx] for idx, emb in enumerate(embss[i]))
-        
-        # timeout
-        m = 3  # Feasible, but takes significantly more than a second
-        S = dnx.chimera_graph(2*m)
-        T = dnx.zephyr_graph(m)
-        timeout = 1 # An unfortunate behaviour
-        embs = find_multiple_embeddings(S, T, timeout=timeout)
-        self.assertEqual(len(embs), 0)
 
+        # embedder, embedder_kwargs, one_to_iterable
+        triangle = {(0,1), (1,2), (0,2)}
+        S = nx.from_edgelist(triangle) # Cannot embed 1:1 on T, which is bipartite.
+        embs = find_multiple_embeddings(
+            S, T, embedder=find_embedding, one_to_iterable=True)
+        self.assertEqual(len(embs), 1)
+        emb = embs[0]
+        node_list = [n for c in emb.values() for n in c]
+        node_set = set(node_list)
+        self.assertEqual(len(node_list), 4)
+        self.assertEqual(len(node_set), 4)
+        self.assertTrue(node_set.issubset(set(T.nodes())),
+                                          'bad values in embedding(s)')
         
     def testMinimalRaster(self):
         for topology in ['chimera', 'pegasus', 'zephyr']:
