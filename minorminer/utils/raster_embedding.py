@@ -20,17 +20,20 @@ import numpy as np
 
 from minorminer.subgraph import find_subgraph
 
-def visualize_embeddings(H, embeddings=None, **kwargs):
+def visualize_embeddings(H, embeddings, prng=None, one_to_iterable=False, **kwargs):
     """Visualizes the embeddings using dwave_networkx's layout functions.
 
     Args:
         H (networkx.Graph): The input graph to be visualized. If the graph
             represents a specialized topology, it must be constructed using
             dwave_networkx (e.g., chimera, pegasus, or zephyr graphs).
-        embeddings (list of dict, optional): A list of embeddings where each
+        embeddings (list of dict): A list of embeddings where each
             embedding is a dictionary mapping nodes of the source graph to
             nodes in the target graph. If not provided, only the graph H
             will be visualized without specific embeddings.
+        prng (np.random.Generator): A pseudo-random number generator with
+            an associated shuffle() operation. This is used to randomize
+            the colormap assignment.
         **kwargs: Additional keyword arguments passed to the drawing functions
             (e.g., node size, font size).
     Draws:
@@ -46,9 +49,17 @@ def visualize_embeddings(H, embeddings=None, **kwargs):
 
     # Create node color mapping
     node_color_dict = {q: float("nan") for q in H.nodes()}
-    if embeddings is not None:
+
+    _embeddings = embeddings
+    if prng is not None:
+        prng.shuffle(_embeddings)
+    if one_to_iterable:
         node_color_dict.update(
-            {q: idx for idx, emb in enumerate(embeddings, 1) for q in emb.values()}
+            {q: idx for idx, emb in enumerate(_embeddings) for c in emb.values() for q in c}
+        )
+    else:
+        node_color_dict.update(
+            {q: idx for idx, emb in enumerate(_embeddings) for q in emb.values()}
         )
 
     # Create edge color mapping
@@ -114,7 +125,8 @@ def shuffle_graph(T, prng):
     return _T
 
 def find_multiple_embeddings(S, T, *, timeout=10, max_num_emb=1, skip_filter=True,
-                             prng=None, embedder=None, embedder_kwargs=None):
+                             prng=None, embedder=None, embedder_kwargs=None,
+                             one_to_iterable=False):
     """Finds multiple disjoint embeddings of a source graph onto a target graph
 
     Uses a greedy strategy to deterministically find multiple disjoint
@@ -125,13 +137,14 @@ def find_multiple_embeddings(S, T, *, timeout=10, max_num_emb=1, skip_filter=Tru
         S (networkx.Graph): The source graph to embed.
         T (networkx.Graph): The target graph in which to embed.
         timeout (int, optional): Timeout per subgraph search in seconds.
-            Defaults to 10.
+            Defaults to 10. Note that timeout=0 implies unbounded time for the
+            default ::code::`embedder=find_subgraph method`
         max_num_emb (int, optional): Maximum number of embeddings to find.
             Defaults to inf (unbounded).
         skip_filter (bool, optional): Specifies whether to skip the subgraph
-            lower bound filter. Defaults to True, meaning the filter is skipped.
+            lower bound filter. Defaults to `True`, meaning the filter is skipped.
             The filter is specific to subgraph embedders, and skip_filter should
-            always be True when embedder is not a subgraph search method.
+            always be `True` when embedder is not a subgraph search method.
         prng (np.random.Generator, optional): When provided, is used to shuffle
             the order of nodes and edges in the source and target graph. This
             can allow sampling from otherwise deterministic routines.
@@ -178,11 +191,12 @@ def find_multiple_embeddings(S, T, *, timeout=10, max_num_emb=1, skip_filter=Tru
             emb = []
         if len(emb) == 0:
             break
-        elif max_num_emb == 1:
-            embs.append(emb)
-        else:
-            _T.remove_nodes_from(emb.values())
-            embs.append(emb)
+        elif max_num_emb > 1:
+            if one_to_iterable:
+                _T.remove_nodes_from(n for c in emb.values() for n in c)
+            else:
+                _T.remove_nodes_from(emb.values())
+        embs.append(emb)
     return embs
 
 def subgraph_embedding_feasibility_filter(S, T):
@@ -312,7 +326,8 @@ def raster_breadth_subgraph_lower_bound(S, T=None, topology=None, t=None):
 
 def raster_embedding_search(S, T, *, timeout=10, raster_breadth=None,
                             max_num_emb=1, tile=None, skip_filter=True,
-                            prng=None, embedder=None, embedder_kwargs=None):
+                            prng=None, embedder=None, embedder_kwargs=None,
+                            one_to_iterable=False):
     """Searches for multiple embeddings within a rastered target graph.
 
     Args:
@@ -326,7 +341,8 @@ def raster_embedding_search(S, T, *, timeout=10, raster_breadth=None,
            found, :code:`raster_breadth_subgraph_lower_bound()`
            provides a lower bound based on a fast feasibility filter.
         timeout (int, optional): Timeout per subgraph search in seconds.
-            Defaults to 10.
+            Defaults to 10. Note that timeout=0 implies unbounded time for the
+            default ::code::`embedder=find_subgraph method`
         max_num_emb (int, optional): Maximum number of embeddings to find.
             Defaults to inf (unbounded).
         tile (networkx.Graph, optional): A subgraph representing a fundamental
@@ -344,6 +360,9 @@ def raster_embedding_search(S, T, *, timeout=10, raster_breadth=None,
             parameter. Defaults to minorminer.subgraph.find_subgraph.
         embedder_kwargs (dict, optional): Specifies arguments for embedder
             other than S, T and timeout.
+        one_to_iterable (bool): If the embedder returns a dict with iterable
+            values set to True, otherwise where the values of nodes of the
+            target graph set to False. False by default to match find_subgraph.
     Returns:
         list: A list of disjoint embeddings.
     """
@@ -406,7 +425,7 @@ def raster_embedding_search(S, T, *, timeout=10, raster_breadth=None,
             # A potential feature extension would be to generate many
             # overlapping embeddings and solve an independent set problem. This
             # may allow additional parallel embeddings.
-            if hasattr(next(iter(emb.items()))[1], '__iter__'):
+            if one_to_iterable:
                 _T.remove_nodes_from([v for c in emb.values() for v in c])
             else:
                 _T.remove_nodes_from(emb.values())
