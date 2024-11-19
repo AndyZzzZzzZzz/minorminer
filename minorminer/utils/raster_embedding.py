@@ -103,8 +103,8 @@ def visualize_embeddings(H, embeddings=None, **kwargs):
         ax=ax)
 
 
-def find_multiple_embeddings(S, T, timeout=10, max_num_emb=1, skip_filter=True,
-                             prng=None):
+def find_multiple_embeddings(S, T, *, timeout=10, max_num_emb=1, skip_filter=True,
+                             prng=None, **embedder, **embedder_kwargs):
     """Finds multiple disjoint embeddings of a source graph onto a target graph
 
     Uses a greedy strategy to deterministically find multiple disjoint
@@ -120,15 +120,28 @@ def find_multiple_embeddings(S, T, timeout=10, max_num_emb=1, skip_filter=True,
             Defaults to inf (unbounded).
         skip_filter (bool, optional): Specifies whether to skip the subgraph
             lower bound filter. Defaults to True, meaning the filter is skipped.
+            The filter is specific to subgraph embedders, and skip_filter should
+            always be True when embedder is not a subgraph search method.
         prng (np.random.Generator, optional): When provided, is used to shuffle
             the order of nodes and edges in the source and target graph. This
             can allow sampling from otherwise deterministic routines.
+        embedder (Callable, optional): Specifies the embedding search method,
+            a callable taking S, T as first two arguments and timeout as a
+            parameter. Defaults to minorminer.subgraph.find_subgraph.
+        embedder_kwargs (dict, optional): Specifies arguments for embedder
+            other than S, T and timeout.
     Returns:
-        list: A list of disjoint embeddings. Each embedding defines a 1:1 map
+        list: A list of disjoint embeddings. Each embedding follows the format
+            dictated by embedder. By default each embedding defines a 1:1 map
             from the source to the target in the form of a dictionary with no
             reusue of target variables.
     """
     embs = []
+
+    if embedder is None:
+        embedder = find_subgraph
+        embedder_kwargs = {triggered_restarts: True}
+
     if max_num_emb == 1 and prng is not None:
         _T = T
     else:
@@ -154,7 +167,7 @@ def find_multiple_embeddings(S, T, timeout=10, max_num_emb=1, skip_filter=True,
         # heuristics here, including those that are not 1:1
 
         if skip_filter or subgraph_embedding_feasibility_filter(_S, _T):
-            emb = find_subgraph(_S, _T, timeout=timeout, triggered_restarts=True)
+            emb = embedder(_S, _T, timeout=timeout, **embedder_kwargs)
         else:
             emb = []
         if len(emb) == 0:
@@ -291,9 +304,9 @@ def raster_breadth_subgraph_lower_bound(S, T=None, topology=None, t=None):
         tile = generator(raster_breadth=raster_breadth)
     return raster_breadth
 
-def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
+def raster_embedding_search(S, T, *, timeout=10, raster_breadth=None,
                             max_num_emb=1, tile=None, skip_filter=True,
-                            prng=None):
+                            prng=None, embedder=None, embedder_kwargs=None):
     """Searches for multiple embeddings within a rastered target graph.
 
     Args:
@@ -320,12 +333,18 @@ def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
             mappings, nodes and edges of source and target graphs are all
             shuffled. This can allow sampling from otherwise deterministic
             routines.
+        embedder (Callable, optional): Specifies the embedding search method,
+            a callable taking S, T as first two arguments and timeout as a
+            parameter. Defaults to minorminer.subgraph.find_subgraph.
+        embedder_kwargs (dict, optional): Specifies arguments for embedder
+            other than S, T and timeout.
     Returns:
         list: A list of disjoint embeddings.
     """
     if raster_breadth is None:
         return find_multiple_embeddings(
-            S, T, timeout=timeout, max_num_emb=max_num_emb, prng=prng)
+            S, T, timeout=timeout, max_num_emb=max_num_emb, prng=prng,
+            embedder=embedder, embedder_kwargs=embedder_kwargs)
 
     if not skip_filter:
         feasibility_bound = raster_breadth_subgraph_lower_bound(S, T=T)
@@ -368,7 +387,8 @@ def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
         sub_embs = find_multiple_embeddings(
             S, Tr,
             max_num_emb=max_num_emb,
-            timeout=timeout, skip_filter=skip_filter, prng=prng)
+            timeout=timeout, skip_filter=skip_filter, prng=prng,
+            embedder=embedder, embedder_kwargs=embedder_kwargs)
         embs += sub_embs
         if len(embs) >= max_num_emb:
             break
