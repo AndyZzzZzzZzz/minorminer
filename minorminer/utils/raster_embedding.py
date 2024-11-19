@@ -24,22 +24,22 @@ def visualize_embeddings(H, embeddings=None, **kwargs):
     """Visualizes the embeddings using dwave_networkx's layout functions.
 
     Args:
-        H (networkx.Graph): The input graph to be visualized. If the graph 
-            represents a specialized topology, it must be constructed using 
+        H (networkx.Graph): The input graph to be visualized. If the graph
+            represents a specialized topology, it must be constructed using
             dwave_networkx (e.g., chimera, pegasus, or zephyr graphs).
-        embeddings (list of dict, optional): A list of embeddings where each 
-            embedding is a dictionary mapping nodes of the source graph to 
-            nodes in the target graph. If not provided, only the graph H 
+        embeddings (list of dict, optional): A list of embeddings where each
+            embedding is a dictionary mapping nodes of the source graph to
+            nodes in the target graph. If not provided, only the graph H
             will be visualized without specific embeddings.
-        **kwargs: Additional keyword arguments passed to the drawing functions 
+        **kwargs: Additional keyword arguments passed to the drawing functions
             (e.g., node size, font size).
     Draws:
-        - Specialized layouts: Uses dwave_networkx's draw_chimera, 
+        - Specialized layouts: Uses dwave_networkx's draw_chimera,
           draw_pegasus, or draw_zephyr if the graph family is identified.
-        - General layouts: Falls back to networkx's draw_networkx for 
+        - General layouts: Falls back to networkx's draw_networkx for
           graphs with unknown topology.
     """
-    fig = plt.gcf() 
+    fig = plt.gcf()
     ax = plt.gca()
     cmap = plt.get_cmap("turbo")
     cmap.set_bad("lightgrey")
@@ -74,7 +74,7 @@ def visualize_embeddings(H, embeddings=None, **kwargs):
     }
     draw_kwargs.update(kwargs)
 
-    topology = H.graph.get('family') 
+    topology = H.graph.get('family')
     # Draw the combined graph with color mappings
     if topology == 'chimera':
         pos = dnx.chimera_layout(H)
@@ -88,11 +88,11 @@ def visualize_embeddings(H, embeddings=None, **kwargs):
     else:
         pos = nx.spring_layout(H)
         nx.draw_networkx(**draw_kwargs)
-    
+
     # Recolor specific edges on top of the original graph
     highlight_edges = [e for e in H.edges() if not np.isnan(edge_color_dict[e])]
     highlight_colors = [edge_color_dict[e] for e in highlight_edges]
-    
+
     nx.draw_networkx_edges(
         H,
         pos=pos,
@@ -101,9 +101,10 @@ def visualize_embeddings(H, embeddings=None, **kwargs):
         width=1,
         edge_cmap=cmap,
         ax=ax)
-    
 
-def find_multiple_embeddings(S, T, timeout=10, max_num_emb=1, skip_filter=True):
+
+def find_multiple_embeddings(S, T, timeout=10, max_num_emb=1, skip_filter=True,
+                             prng=None):
     """Finds multiple disjoint embeddings of a source graph onto a target graph
 
     Uses a greedy strategy to deterministically find multiple disjoint
@@ -117,25 +118,43 @@ def find_multiple_embeddings(S, T, timeout=10, max_num_emb=1, skip_filter=True):
             Defaults to 10.
         max_num_emb (int, optional): Maximum number of embeddings to find.
             Defaults to inf (unbounded).
-        skip_filter (bool, optional): Specifies whether to skip the subgraph 
+        skip_filter (bool, optional): Specifies whether to skip the subgraph
             lower bound filter. Defaults to True, meaning the filter is skipped.
+        prng (np.random.Generator, optional): When provided, is used to shuffle
+            the order of nodes and edges in the source and target graph. This
+            can allow sampling from otherwise deterministic routines.
     Returns:
         list: A list of disjoint embeddings. Each embedding defines a 1:1 map
             from the source to the target in the form of a dictionary with no
             reusue of target variables.
     """
     embs = []
-    if max_num_emb == 1:
+    if max_num_emb == 1 and prng is not None:
         _T = T
     else:
         max_num_emb = min(int(T.number_of_nodes()/S.number_of_nodes()), max_num_emb)
-        _T = T.copy()
+        if prng is not None:
+            _T = T.copy()
+        else:
+            nodes = np.random.shuffle(T.nodes())
+            edges = np.random.shufulle(T.edges())
+            _T = nx.Graph()
+            _T.add_nodes_from(nodes)
+            _T.add_edges_from(edges)
+    if prng is not None:
+        nodes = np.random.shuffle(T.nodes())
+        edges = np.random.shufulle(T.edges())
+        _S = nx.Graph()
+        _S.add_nodes_from(nodes)
+        _S.add_edges_from(edges)
+    else:
+        _S = S
     for _ in range(max_num_emb):
         # A potential feature enhancement would be to allow different embedding
         # heuristics here, including those that are not 1:1
-        
-        if skip_filter or subgraph_embedding_feasibility_filter(S, T):
-            emb = find_subgraph(S, _T, timeout=timeout, triggered_restarts=True)
+
+        if skip_filter or subgraph_embedding_feasibility_filter(_S, _T):
+            emb = find_subgraph(_S, _T, timeout=timeout, triggered_restarts=True)
         else:
             emb = []
         if len(emb) == 0:
@@ -182,6 +201,8 @@ def raster_breadth_subgraph_upper_bound(T=None):
         T (networkx.Graph, optional): The target graph in which to embed. The
             graph must be of type zephyr, pegasus or chimera and constructed by
             dwave_networkx.
+    Returns:
+        int: The maximum possible size of a tile
     """
     return max(T.graph.get('rows'), T.graph.get('columns'))
 
@@ -271,7 +292,8 @@ def raster_breadth_subgraph_lower_bound(S, T=None, topology=None, t=None):
     return raster_breadth
 
 def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
-                            max_num_emb=1, tile=None, skip_filter=True):
+                            max_num_emb=1, tile=None, skip_filter=True,
+                            prng=None):
     """Searches for multiple embeddings within a rastered target graph.
 
     Args:
@@ -288,19 +310,23 @@ def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
             Defaults to 10.
         max_num_emb (int, optional): Maximum number of embeddings to find.
             Defaults to inf (unbounded).
-        tile (networkx.Graph, optional): A subgraph representing a fundamental 
-            unit (tile) of the target graph `T` used for embedding. If none 
+        tile (networkx.Graph, optional): A subgraph representing a fundamental
+            unit (tile) of the target graph `T` used for embedding. If none
             provided, the tile is automatically generated based on the `raster_breadth`
-            and the family of `T` (chimera, pegasus, or zephyr). 
-        skip_filter (bool, optional): Specifies whether to skip the subgraph 
+            and the family of `T` (chimera, pegasus, or zephyr).
+        skip_filter (bool, optional): Specifies whether to skip the subgraph
             lower bound filter. Defaults to True, meaning the filter is skipped.
+        prng (np.random.Generator, optional): If provided the ordering of
+            mappings, nodes and edges of source and target graphs are all
+            shuffled. This can allow sampling from otherwise deterministic
+            routines.
     Returns:
         list: A list of disjoint embeddings.
     """
     if raster_breadth is None:
         return find_multiple_embeddings(
-            S, T, timeout=timeout, max_num_emb=max_num_emb)
-    
+            S, T, timeout=timeout, max_num_emb=max_num_emb, prng=prng)
+
     if not skip_filter:
         feasibility_bound = raster_breadth_subgraph_lower_bound(S, T=T)
         if feasibility_bound is None or raster_breadth < feasibility_bound:
@@ -308,7 +334,7 @@ def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
             return []
     # A possible feature enhancement might allow for raster_breadth to be
     # replaced by raster shape.
-    family = T.graph.get('family') 
+    family = T.graph.get('family')
     if family == 'chimera':
         sublattice_mappings = dnx.chimera_sublattice_mappings
         t = T.graph['tile']
@@ -327,8 +353,12 @@ def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
         raise ValueError("source graphs must a graph constructed by "
                          "dwave_networkx as chimera, pegasus or zephyr type")
 
+    if prng is not None:
+        sublattice_mappings = list(sublattice_mappings)
+        prng.shuffle(sublattice_mappings)
+
     embs = []
-    if max_num_emb == 1:
+    if max_num_emb == 1 and prng is None:
         _T = T
     else:
         _T = T.copy()
@@ -338,7 +368,7 @@ def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
         sub_embs = find_multiple_embeddings(
             S, Tr,
             max_num_emb=max_num_emb,
-            timeout=timeout, skip_filter=skip_filter)
+            timeout=timeout, skip_filter=skip_filter, prng=prng)
         embs += sub_embs
         if len(embs) >= max_num_emb:
             break
@@ -347,8 +377,11 @@ def raster_embedding_search(S, T, timeout=10, raster_breadth=None,
             # A potential feature extension would be to generate many
             # overlapping embeddings and solve an independent set problem. This
             # may allow additional parallel embeddings.
-            _T.remove_nodes_from(emb.values())
-
+            if hasattr(next(iter(emb.items()))[1], '__iter__'):
+                _T.remove_nodes_from(emb.values())
+            else:
+                _T.remove_nodes_from([v for c in emb.values() for v in c])
+   
     return embs
 
 
@@ -389,13 +422,13 @@ if __name__ == "__main__":
     generators = {'chimera': dnx.chimera_graph,
                   'pegasus': dnx.pegasus_graph,
                   'zephyr': dnx.zephyr_graph}
-    
+
     # Iterate over Topologies for Raster Embedding Checks
     for stopology in topologies:
         raster_breadth_S = smallest_tile[stopology] + 1
         S = generators[stopology](raster_breadth_S)
 
-       
+   
         # For each target topology, checks whether embedding the graph S into that topology is feasible
         for ttopology in topologies:
             raster_breadth = raster_breadth_subgraph_lower_bound(
@@ -436,7 +469,7 @@ if __name__ == "__main__":
         value_list = [v for emb in embs for v in emb.values()]
         assert len(set(value_list)) == len(value_list)
 
-        plt.figure(figsize=(12, 12)) 
+        plt.figure(figsize=(12, 12))
         #visualize_embeddings(T, embeddings=embs)
         #plt.show()
         embs = raster_embedding_search(S, T)
