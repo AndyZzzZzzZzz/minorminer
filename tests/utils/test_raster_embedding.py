@@ -135,6 +135,13 @@ class TestRasterEmbedding(unittest.TestCase):
         self.assertTrue(node_set.issubset(set(T.nodes())),
                                           'bad values in embedding(s)')
         
+        embedder_kwargs = {'initial_chains': emb}  # A valid embedding
+        embs = find_multiple_embeddings(
+            S, T, embedder=find_embedding, embedder_kwargs=embedder_kwargs,
+            one_to_iterable=True)
+        # NB - ordering within chains can change (seems to!)
+        self.assertTrue(all(set(emb[i])==set(embs[0][i]) for i in range(3)))
+        
     def testMinimalRaster(self):
         for topology in ['chimera', 'pegasus', 'zephyr']:
             if topology == 'chimera':
