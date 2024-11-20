@@ -12,7 +12,10 @@ from minorminer import find_embedding
 from minorminer.utils.raster_embedding import (visualize_embeddings,
                                                shuffle_graph,
                                                find_multiple_embeddings,
-                                               raster_embedding_search)
+                                               raster_embedding_search,
+                                               subgraph_embedding_feasibility_filter,
+                                               raster_breadth_subgraph_upper_bound,
+                                               raster_breadth_subgraph_lower_bound)
 
 _display = os.environ.get('DISPLAY', '') != ''
 
@@ -21,10 +24,11 @@ class TestRasterEmbedding(unittest.TestCase):
 
     @unittest.skipUnless(_display, " No display found")
     def testVisualizeEmbeddings(self):
-        plt.figure(1)  # Temporary
+        # plt.figure(1)  # Temporary
         embeddings = [{}]
         T = dnx.chimera_graph(2)
         visualize_embeddings(T, embeddings)
+        # plt.show()  # Temporary
         blocks_of = [1, 8]
         one_to_iterable = [True, False]
         for b, o in product(blocks_of, one_to_iterable):
@@ -37,13 +41,14 @@ class TestRasterEmbedding(unittest.TestCase):
                                for n in range(b)}
                               for idx in range(T.number_of_nodes()//b)]  # Blocks of 8
                 
-            plt.figure(f'2 {b} {o}')  # Temporary
-            visualize_embeddings(T, embeddings)
+            # plt.figure(f'2 {b} {o}')  # Temporary
+            visualize_embeddings(T, embeddings, one_to_iterable=o)
+            # plt.show()  # Temporary
             prng = np.random.default_rng()
-            plt.figure(f'3 {b} {o}')  # Temporary
-            visualize_embeddings(T, embeddings, prng=prng)
-        # plt.show()  # Temporary
-
+            # plt.figure(f'3 {b} {o}')  # Temporary
+            visualize_embeddings(T, embeddings, prng=prng, one_to_iterable=o)
+            # plt.show()  # Temporary
+            
     def testShuffleGraph(self):
         prng = np.random.default_rng()
         T = dnx.zephyr_graph(1)
@@ -140,9 +145,58 @@ class TestRasterEmbedding(unittest.TestCase):
             S, T, embedder=find_embedding, embedder_kwargs=embedder_kwargs,
             one_to_iterable=True)
         # NB - ordering within chains can change (seems to!)
-        self.assertTrue(all(set(emb[i])==set(embs[0][i]) for i in range(3)))
+        self.assertTrue(all(set(emb[i]) == set(embs[0][i]) for i in range(3)))
         
-    def testMinimalRaster(self):
+    def testSubgraphEmbeddingFeasibilityFilter(self):
+        m = 7 # Odd m
+        T = dnx.chimera_graph(m)
+        S = dnx.chimera_graph(m-1)
+        self.assertTrue(subgraph_embedding_feasibility_filter(S, T))
+        S.add_edges_from((i,i+1) for i in range(S.number_of_nodes(), T.number_of_nodes()))
+        self.assertFalse(subgraph_embedding_feasibility_filter(S, T))
+        # Too many edges:
+        S = dnx.zephyr_graph(m//2)
+        self.assertFalse(subgraph_embedding_feasibility_filter(S, T))
+        # Subtle failure case (by ordered degrees filter):
+        S = dnx.chimera_torus(m-1)
+        self.assertTrue(S.number_of_edges() < T.number_of_edges() and
+                        S.number_of_nodes() < T.number_of_nodes())
+        self.assertFalse(subgraph_embedding_feasibility_filter(S, T)) 
+        # Filter doesn't seem to add value! find_subgraph is still fast ..
+
+    def testRasterBreadthSubgraphUpperBound(self):
+        L = np.random.randint(2) + 2
+        T = dnx.zephyr_graph(L-1)
+        self.assertEqual(L-1, raster_breadth_subgraph_upper_bound(T=T))
+        T = dnx.pegasus_graph(L)
+        self.assertEqual(L, raster_breadth_subgraph_upper_bound(T=T))
+        T = dnx.chimera_graph(L, L - 1, 1)
+        self.assertEqual(L, raster_breadth_subgraph_upper_bound(T=T))
+        
+    def testRasterBreadthSubgraphLowerBound(self):
+        L = np.random.randint(2) + 2
+        T = dnx.zephyr_graph(L-1)
+        self.assertEqual(L-1, raster_breadth_subgraph_lower_bound(S=T, T=T))
+        self.assertEqual(L-1, raster_breadth_subgraph_lower_bound(
+            S=T, topology='zephyr'))
+        T = dnx.pegasus_graph(L)
+        self.assertEqual(L, raster_breadth_subgraph_lower_bound(S=T, T=T))
+        self.assertEqual(L, raster_breadth_subgraph_lower_bound(
+            S=T, topology='pegasus'))
+        T = dnx.chimera_graph(L, L - 1, 1)
+        self.assertEqual(L, raster_breadth_subgraph_lower_bound(S=T, T=T))
+        self.assertEqual(L, raster_breadth_subgraph_lower_bound(
+            S=T, topology='chimera', t=1))
+
+        m = 6
+        S = dnx.chimera_graph(m)  # Embeds onto Zephyr[m//2]
+        self.assertEqual(m//2, raster_breadth_subgraph_lower_bound(
+            S=S, topology='zephyr'))
+        T = dnx.zephyr_graph(m)
+        self.assertEqual(m//2, raster_breadth_subgraph_lower_bound(
+            S=S, T=T))
+        
+    def testRasterEmbeddingSearchBasic(self):
         for topology in ['chimera', 'pegasus', 'zephyr']:
             if topology == 'chimera':
                 min_raster_scale = 1
@@ -178,6 +232,6 @@ class TestRasterEmbedding(unittest.TestCase):
             self.assertEqual(len(set(value_list)), len(value_list),
                              'embeddings overlap')
 
-    
+        
 if __name__ == '__main__':
     unittest.main()
