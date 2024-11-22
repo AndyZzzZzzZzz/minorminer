@@ -20,7 +20,7 @@ import numpy as np
 
 from minorminer.subgraph import find_subgraph
 
-def visualize_embeddings(H, embeddings, prng=None, one_to_iterable=False, **kwargs):
+def visualize_embeddings(H: nx.Graph, embeddings: list, prng: np.random.Generator=None, one_to_iterable: bool=False, **kwargs) -> None:
     """Visualizes the embeddings using dwave_networkx's layout functions.
 
     Args:
@@ -124,9 +124,9 @@ def shuffle_graph(T, prng):
     _T.add_edges_from(edges)
     return _T
 
-def find_multiple_embeddings(S, T, *, timeout=10, max_num_emb=1, skip_filter=True,
-                             prng=None, embedder=None, embedder_kwargs=None,
-                             one_to_iterable=False):
+def find_multiple_embeddings(S: nx.Graph, T: nx.Graph, *, timeout: int=10, max_num_emb: int=1, skip_filter: bool=True,
+                             prng: np.random.Generator=None, embedder: callable=None, embedder_kwargs: dict=None,
+                             one_to_iterable: bool=False) -> list:
     """Finds multiple disjoint embeddings of a source graph onto a target graph
 
     Uses a greedy strategy to deterministically find multiple disjoint
@@ -199,7 +199,7 @@ def find_multiple_embeddings(S, T, *, timeout=10, max_num_emb=1, skip_filter=Tru
         embs.append(emb)
     return embs
 
-def subgraph_embedding_feasibility_filter(S, T):
+def subgraph_embedding_feasibility_filter(S: nx.Graph, T: nx.Graph) -> bool:
     """ Feasibility filter for subgraph embedding.
 
     If S cannot subgraph embed on T based on number of nodes and degree
@@ -227,7 +227,7 @@ def subgraph_embedding_feasibility_filter(S, T):
         else:
             return True
 
-def raster_breadth_subgraph_upper_bound(T=None):
+def raster_breadth_subgraph_upper_bound(T: nx.Graph=None) -> int:
     """Determines a raster breadth upper bound for subgraph embedding.
 
     Args:
@@ -239,7 +239,7 @@ def raster_breadth_subgraph_upper_bound(T=None):
     """
     return max(T.graph.get('rows'), T.graph.get('columns'))
 
-def raster_breadth_subgraph_lower_bound(S, T=None, topology=None, t=None):
+def raster_breadth_subgraph_lower_bound(S: nx.Graph, T: nx.Graph=None, topology: str=None, t: int=None) -> float:
     """Determines a raster breadth lower bound for subgraph embedding.
 
     Using efficiently established graph properties such as number of nodes,
@@ -324,10 +324,10 @@ def raster_breadth_subgraph_lower_bound(S, T=None, topology=None, t=None):
         tile = generator(raster_breadth=raster_breadth)
     return raster_breadth
 
-def raster_embedding_search(S, T, *, timeout=10, raster_breadth=None,
-                            max_num_emb=1, tile=None, skip_filter=True,
-                            prng=None, embedder=None, embedder_kwargs=None,
-                            one_to_iterable=False):
+def raster_embedding_search(S: nx.Graph, T: nx.Graph, *, raster_breadth: int=None, timeout: int=10,
+                            max_num_emb: int=1, tile: nx.Graph=None, skip_filter: bool=True,
+                            prng: np.random.Generator=None, embedder: callable=None, embedder_kwargs: dict=None,
+                            one_to_iterable: bool=False) -> list:
     """Searches for multiple embeddings within a rastered target graph.
 
     Args:
