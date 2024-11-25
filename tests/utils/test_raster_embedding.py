@@ -71,7 +71,7 @@ class TestRasterEmbedding(unittest.TestCase):
                    for e in square}
         S = nx.from_edgelist(square)
         T = nx.from_edgelist(squares) # Room for 1!
-        embs = raster_embedding_search(S, T)
+        embs = find_multiple_embeddings(S, T)
         self.assertEqual(len(embs), 1,
                         'mismatched number of embeddings')
         L = 3 # Room for 4 embeddings, might find less (as few as 1)
@@ -81,7 +81,7 @@ class TestRasterEmbedding(unittest.TestCase):
                    for j in range(L)
                    for e in square}
         T = nx.from_edgelist(squares) # Room for 4!
-        embs = raster_embedding_search(S, T,
+        embs = find_multiple_embeddings(S, T,
                                        max_num_emb=float('inf'))
         
         self.assertLess(len(embs), 5,
