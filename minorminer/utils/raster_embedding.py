@@ -34,6 +34,10 @@ def visualize_embeddings(H: nx.Graph, embeddings: list, prng: np.random.Generato
         prng (np.random.Generator): A pseudo-random number generator with
             an associated shuffle() operation. This is used to randomize
             the colormap assignment.
+        one_to_iterable (bool, optional): Determines how embedding mappings are interpreted.
+            Set to True to allow multiple target nodes to be associated with a single source node.
+            Use this option when embeddings map to multiple nodes per source. Defaults to `False` for 
+            one-to-one embeddings where each source node maps to exactly one target node. 
         **kwargs: Additional keyword arguments passed to the drawing functions
             (e.g., node size, font size).
     Draws:
@@ -153,6 +157,10 @@ def find_multiple_embeddings(S: nx.Graph, T: nx.Graph, *, timeout: int=10, max_n
             parameter. Defaults to minorminer.subgraph.find_subgraph.
         embedder_kwargs (dict, optional): Specifies arguments for embedder
             other than S, T and timeout.
+        one_to_iterable (bool, optional): Determines how embedding mappings are interpreted.
+            Set to True to allow multiple target nodes to be associated with a single source node.
+            Use this option when embeddings map to multiple nodes per source. Defaults to `False` for 
+            one-to-one embeddings where each source node maps to exactly one target node. 
     Returns:
         list: A list of disjoint embeddings. Each embedding follows the format
             dictated by embedder. By default each embedding defines a 1:1 map
