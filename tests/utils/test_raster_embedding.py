@@ -132,14 +132,14 @@ class TestRasterEmbedding(unittest.TestCase):
 
         prng2 = np.random.default_rng(seed)
         embs_run2 = find_multiple_embeddings(S, T, max_num_emb=4, prng=prng2)
+        self.assertEqual(embs_run1, embs_run2,
+                         'seed does not allow reproducibility')
         
         prng3 = np.random.default_rng(seed + 1)
         embs_run3 = find_multiple_embeddings(S, T, max_num_emb=4, prng=prng3)
-
-        # Check reproducibility with the same prng, this test is failing
-        #self.assertEqual(embs_run1,embs_run2)
-        # Check variability with different prng seeds
-        self.assertNotEqual(embs_run1,embs_run3)
+        self.assertNotEqual(embs_run1, embs_run3,
+                            'different seeds give same embedding, this should not occur '
+                            'with high probability')
         
         # embedder, embedder_kwargs, one_to_iterable
         triangle = {(0,1), (1,2), (0,2)}

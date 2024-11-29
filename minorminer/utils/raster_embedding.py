@@ -117,12 +117,14 @@ def visualize_embeddings(H: nx.Graph, embeddings: list, prng: np.random.Generato
         edge_cmap=cmap,
         ax=ax)
 
-def shuffle_graph(T, prng):
+def shuffle_graph(T, prng=None):
     """Shuffle the node and edge ordering of a networkx graph. """
+    if prng is None:
+        prng = np.random.default_rng()
     nodes = list(T.nodes())
-    np.random.shuffle(nodes)
+    prng.shuffle(nodes)
     edges = list(T.edges())
-    np.random.shuffle(edges)
+    prng.shuffle(edges)
     _T = nx.Graph()
     _T.add_nodes_from(nodes)
     _T.add_edges_from(edges)
@@ -168,7 +170,6 @@ def find_multiple_embeddings(S: nx.Graph, T: nx.Graph, *, timeout: int=10, max_n
             reusue of target variables.
     """
     embs = []
-
     if embedder is None:
         embedder = find_subgraph
         embedder_kwargs = {'triggered_restarts': True}
@@ -183,7 +184,6 @@ def find_multiple_embeddings(S: nx.Graph, T: nx.Graph, *, timeout: int=10, max_n
             _T = T.copy()
         else:
             _T = shuffle_graph(T, prng)
-
     if prng is None:
         _S = S
     else:
