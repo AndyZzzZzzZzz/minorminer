@@ -208,7 +208,7 @@ def find_multiple_embeddings(S: nx.Graph, T: nx.Graph, *, timeout: int=10, max_n
         embs.append(emb)
     return embs
 
-def embedding_feasibility_filter(S: nx.Graph, T: nx.Graph, one_to_one=False) -> bool:
+def embedding_feasibility_filter(S: nx.Graph, T: nx.Graph, one_to_one: bool=False) -> bool:
     """ Feasibility filter for embedding.
 
     If S cannot subgraph embed on T based on the degree distribution of
@@ -236,11 +236,11 @@ def embedding_feasibility_filter(S: nx.Graph, T: nx.Graph, one_to_one=False) -> 
         S_degree = np.sort([S.degree[n] for n in S.nodes()])
         T_degree = np.sort([T.degree[n] for n in T.nodes()])
 
-        if np.any(T_degree[:-1-len(S_degree):-1] < S_degree[::-1]):
-            if one_to_one:
+        if np.any(T_degree[-len(S_degree):] < S_degree):
+            if one_to_one or T_degree[-1] <=2:
                 # Too many high degree nodes in S
                 return False
-            elif T_degree[-1] > 2:  # Attempt minor embed (enhance T degrees)
+            else:  # Attempt minor embed (enhance T degrees)
                 # Minor embedding feasibility reduces to bin packing when
                 # considering a best target case knowing only the degree
                 # distribution. In general feasibility is NP-complete, a cheap
