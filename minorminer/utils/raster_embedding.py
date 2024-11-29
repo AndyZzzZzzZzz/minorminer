@@ -17,6 +17,7 @@ import dwave_networkx as dnx
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
+from collections import Counter
 
 from minorminer.subgraph import find_subgraph
 
@@ -193,7 +194,7 @@ def find_multiple_embeddings(S: nx.Graph, T: nx.Graph, *, timeout: int=10, max_n
         # A potential feature enhancement would be to allow different embedding
         # heuristics here, including those that are not 1:1
 
-        if skip_filter or subgraph_embedding_feasibility_filter(_S, _T):
+        if skip_filter or embedding_feasibility_filter(_S, _T, not one_to_iterable):
             emb = embedder(_S, _T, timeout=timeout, **embedder_kwargs)
         else:
             emb = []
@@ -207,17 +208,21 @@ def find_multiple_embeddings(S: nx.Graph, T: nx.Graph, *, timeout: int=10, max_n
         embs.append(emb)
     return embs
 
-def subgraph_embedding_feasibility_filter(S: nx.Graph, T: nx.Graph) -> bool:
-    """ Feasibility filter for subgraph embedding.
+def embedding_feasibility_filter(S: nx.Graph, T: nx.Graph, one_to_one=False) -> bool:
+    """ Feasibility filter for embedding.
 
-    If S cannot subgraph embed on T based on number of nodes and degree
-    distribution return False. Otherwise returns True. Note that
-    False positives are possible, the graph isomorphisms problem
-    is NP-hard and this is a cheap filter.
+    If S cannot subgraph embed on T based on the degree distribution of
+    the source and target graphs returns False. Otherwise returns True.
+    False positives are permissable, deciding the graph isomorphisms problem
+    is NP-complete and this is an efficient filter.
+    The degree distribution test is one of many possible heuristics, exploiting
+    additional graph structure strictly stronger filters are possible
 
     Args:
-        S (networkx.Graph): The source graph to embed.
-        T (networkx.Graph, optional): The target graph in which to embed.
+        S: The source graph to embed.
+        T: The target graph in which to embed.
+        one_to_one: Permit only 1 to 1 embeddings (subgraph embeddings),
+            are permitted.
     Returns:
         bool: False is subgraph embedding is definitely infeasible, True
            otherwise.
@@ -228,12 +233,43 @@ def subgraph_embedding_feasibility_filter(S: nx.Graph, T: nx.Graph) -> bool:
         T.number_of_edges() < S.number_of_edges()):
         return False
     else:
-        S_degree = sorted(S.degree[n] for n in S.nodes())
-        T_degree = sorted(T.degree[n] for n in T.nodes())
-        if any(T_degree[-i-1] < d for i,d in enumerate(S_degree[::-1])):
-            return False
-        else:
-            return True
+        S_degree = np.sort([S.degree[n] for n in S.nodes()])
+        T_degree = np.sort([T.degree[n] for n in T.nodes()])
+
+        if np.any(T_degree[:-1-len(S_degree):-1] < S_degree[::-1]):
+            if one_to_one:
+                # Too many high degree nodes in S
+                return False
+            elif T_degree[-1] > 2:  # Attempt minor embed (enhance T degrees)
+                # Minor embedding feasibility reduces to bin packing when
+                # considering a best target case knowing only the degree
+                # distribution. In general feasibility is NP-complete, a cheap
+                # marginal degree distribution filter is used.
+
+                # We can eliminate nodes of equal degree assuming best case:
+                ResidualCounts = Counter(T_degree)
+                ResidualCounts.subtract(Counter(S_degree))
+
+                # Target nodes of degree x <=2 are only of use for minor
+                # embedding source nodes of degree <=x:
+                for kS in range(3):
+                    if ResidualCounts[kS] < 0:
+                        ResidualCounts[kS+1] += ResidualCounts[kS]
+                    ResidualCounts[kS] = 0
+                nT_auxiliary = sum(ResidualCounts.values())  # available
+                
+                # In best case all target nodes have degree kTmax, and chains
+                # are trees. To cover degree k in S requires n auxiliary target
+                # nodes such that kTmax + n(kTmax-2) >= k
+                kTmax = np.max([k for k,v in ResidualCounts.items() if v>0])
+                min_auxiliary_necessary = sum(
+                    [-v*np.ceil((k-kTmax)/(kTmax-2))
+                     for k, v in ResidualCounts.items() if v<0])
+                if min_auxiliary_necessary > nT_auxiliary:
+                    return False
+
+    return True
+
 
 def raster_breadth_subgraph_upper_bound(T: nx.Graph=None) -> int:
     """Determines a raster breadth upper bound for subgraph embedding.
@@ -247,28 +283,30 @@ def raster_breadth_subgraph_upper_bound(T: nx.Graph=None) -> int:
     """
     return max(T.graph.get('rows'), T.graph.get('columns'))
 
-def raster_breadth_subgraph_lower_bound(S: nx.Graph, T: nx.Graph=None, topology: str=None, t: int=None) -> float:
-    """Determines a raster breadth lower bound for subgraph embedding.
+def raster_breadth_subgraph_lower_bound(S: nx.Graph, T: nx.Graph=None, topology: str=None, t: int=None,
+                                        one_to_one: bool=False) -> float:
+    """Returns a lower bound on the graph size required for embedding.
 
     Using efficiently established graph properties such as number of nodes,
-    number of edges, node-degree distribution and two-colorability establish
-    a lower bound on the required raster_breadth for a 1:1 (subgraph)
-    embedding.
-    If embedding is infeasible by any raster breadth is infeasible based on
-    this rudimentary filter then None is returned.
+    number of edges, node-degree distribution, and two-colorability establish
+    a lower bound on the required scale (m) of dwave_networkx graphs.
+    There may be no scale at which embedding is feasible, in which case None is
+    returned.
     Either T or topology must be specified.
 
     Args:
-        S (networkx.Graph): The source graph to embed.
-        T (networkx.Graph, optional): The target graph in which to embed. The
+        S: The source graph to embed.
+        T: The target graph in which to embed. The
             graph must be of type zephyr, pegasus or chimera and constructed by
             dwave_networkx.
-        topology (str, optional): The topology 'chimera', 'pegasus' or
+        topology: The topology 'chimera', 'pegasus' or
             'zephyr'. This is inferred from T by default. Any set value must
             be consistent with T (if T is not None).
-        t (int, optional): the tile parameter, relevant for zephyr and chimera
+        t: the tile parameter, relevant for zephyr and chimera
             cases. Inferred from T by defaut. Any set value must be consistent
             with T (if T is not None).
+        one_to_one: True if a subgraph embedding is assumed, False for general
+            embeddings.
     Returns
         float: minimum raster_breadth for embedding to be feasible. Returns
             None if embedding for any raster breadth is infeasible.
@@ -278,7 +316,7 @@ def raster_breadth_subgraph_lower_bound(S: nx.Graph, T: nx.Graph=None, topology:
     # the number of nodes is depleted.
     # This could be a possible feature expansion.
     if T is not None:
-        if subgraph_embedding_feasibility_filter(S, T) is False:
+        if embedding_feasibility_filter(S, T, one_to_one) is False:
             return None
         if topology is None:
             topology = T.graph.get('family')
@@ -327,7 +365,7 @@ def raster_breadth_subgraph_lower_bound(S: nx.Graph, T: nx.Graph=None, topology:
     # Evaluate tile feasibility (defect free subgraphs)
     raster_breadth = round(raster_breadth)
     tile = generator(raster_breadth=raster_breadth)
-    while subgraph_embedding_feasibility_filter(S, tile) is False:
+    while embedding_feasibility_filter(S, tile, one_to_one) is False:
         raster_breadth += 1
         tile = generator(raster_breadth=raster_breadth)
     return raster_breadth
@@ -376,11 +414,12 @@ def raster_embedding_search(S: nx.Graph, T: nx.Graph, *, raster_breadth: int=Non
     """
     if raster_breadth is None:
         return find_multiple_embeddings(
-            S, T, timeout=timeout, max_num_emb=max_num_emb, prng=prng,
+            S=S, T=T, timeout=timeout, max_num_emb=max_num_emb, prng=prng,
             embedder=embedder, embedder_kwargs=embedder_kwargs)
 
     if not skip_filter:
-        feasibility_bound = raster_breadth_subgraph_lower_bound(S, T=T)
+        feasibility_bound = raster_breadth_subgraph_lower_bound(
+            S=S, T=T, one_to_one=not one_to_iterable)
         if feasibility_bound is None or raster_breadth < feasibility_bound:
             warnings.warn('raster_breadth < lower bound')
             return []
@@ -488,7 +527,7 @@ if __name__ == "__main__":
         # For each target topology, checks whether embedding the graph S into that topology is feasible
         for ttopology in topologies:
             raster_breadth = raster_breadth_subgraph_lower_bound(
-                S, topology=ttopology)
+                S, topology=ttopology, one_to_one=True)
             if raster_breadth is None:
                 print(f'Embedding {stopology}-{raster_breadth_S} in '
                       f'{ttopology} is infeasible.')

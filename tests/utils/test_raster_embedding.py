@@ -3,19 +3,20 @@
 import unittest
 import os
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import networkx as nx
 from itertools import product
 
 import dwave_networkx as dnx
 from minorminer import find_embedding
-from minorminer.utils.raster_embedding import (visualize_embeddings,
-                                               shuffle_graph,
-                                               find_multiple_embeddings,
-                                               raster_embedding_search,
-                                               subgraph_embedding_feasibility_filter,
-                                               raster_breadth_subgraph_upper_bound,
-                                               raster_breadth_subgraph_lower_bound)
+# Note Module will be renamed - remove comments later.
+from minorminer.utils.raster_embedding import (visualize_embeddings, #_embeddings.py
+                                               shuffle_graph, # subgraph.py
+                                               find_multiple_embeddings, # parallel_embeddings.py
+                                               raster_embedding_search, # parallel_embeddings.py
+                                               embedding_feasibility_filter, # feasibility.py
+                                               raster_breadth_subgraph_upper_bound, # feasibility.py
+                                               raster_breadth_subgraph_lower_bound) # feasibility.py
 
 _display = os.environ.get('DISPLAY', '') != ''
 
@@ -58,6 +59,22 @@ class TestRasterEmbedding(unittest.TestCase):
         self.assertNotEqual(list(T.nodes()), list(Ts.nodes()))
         self.assertNotEqual(list(T.edges()), list(Ts.edges()))
 
+        seed = 42
+        prng1 = np.random.default_rng(seed)
+        G1 = shuffle_graph(T, prng=prng1)
+        prng2 = np.random.default_rng(seed)
+        G2 = shuffle_graph(T, prng=prng2)
+        self.assertEqual(list(G1.nodes), list(G2.nodes),
+                         'seed does not allow reproducibility')
+        self.assertEqual(list(G1.edges), list(G2.edges),
+                         'seed does not allow reproducibility')
+        prng3 = np.random.default_rng(seed + 1)
+        G2 = shuffle_graph(T, prng=prng3)
+        self.assertNotEqual(list(G1.nodes), list(G2.nodes),
+                            'different seeds give same Graph')
+        self.assertNotEqual(list(G1.edges), list(G2.edges),
+                            'different seeds give same Graph')
+        
     def testFindMultipleEmbeddingsBasic(self):
         square = {((0, 0),(0, 1)),
                   ((0, 1),(1, 1)),
@@ -166,19 +183,29 @@ class TestRasterEmbedding(unittest.TestCase):
         m = 7 # Odd m
         T = dnx.chimera_graph(m)
         S = dnx.chimera_graph(m-1)
-        self.assertTrue(subgraph_embedding_feasibility_filter(S, T))
+        for one_to_one in [True,False]:
+            self.assertTrue(embedding_feasibility_filter(S, T, one_to_one=one_to_one),
+                            'embedding expected to be feasible')
         S.add_edges_from((i,i+1) for i in range(S.number_of_nodes(), T.number_of_nodes()))
-        self.assertFalse(subgraph_embedding_feasibility_filter(S, T))
+        for one_to_one in [True, False]:
+            self.assertFalse(embedding_feasibility_filter(S, T, one_to_one=one_to_one))
         # Too many edges:
         S = dnx.zephyr_graph(m//2)
-        self.assertFalse(subgraph_embedding_feasibility_filter(S, T))
+        for one_to_one in [True, False]:
+            self.assertFalse(embedding_feasibility_filter(S, T, one_to_one=one_to_one))
         # Subtle failure case (by ordered degrees filter):
+        m = 4
+        T = dnx.chimera_graph(m)
         S = dnx.chimera_torus(m-1)
         self.assertTrue(S.number_of_edges() < T.number_of_edges() and
                         S.number_of_nodes() < T.number_of_nodes())
-        self.assertFalse(subgraph_embedding_feasibility_filter(S, T)) 
-        # Filter doesn't seem to add value! find_subgraph is still fast ..
-
+        self.assertFalse(embedding_feasibility_filter(S, T, one_to_one=True),
+                         'Should fail because not enough connectivity 6 nodes') 
+        self.assertTrue(embedding_feasibility_filter(S, T, one_to_one=False),
+                        'T {5:64, 6: 64}; S {6: 72}; making 8 degree-8 '
+                        'chains, each from 2 degree-5 nodes, allows embedding') 
+        # Check tetrahedron cannot be embedded on a graph with a triangle + 0,1,2 connectivity nodes.
+        
     def testRasterBreadthSubgraphUpperBound(self):
         L = np.random.randint(2) + 2
         T = dnx.zephyr_graph(L-1)
