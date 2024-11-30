@@ -256,8 +256,13 @@ def embedding_feasibility_filter(S: nx.Graph, T: nx.Graph, one_to_one: bool=Fals
                     if ResidualCounts[kS] < 0:
                         ResidualCounts[kS+1] += ResidualCounts[kS]
                     ResidualCounts[kS] = 0
-                nT_auxiliary = sum(ResidualCounts.values())  # available
-                
+
+                if all(v>0 for v in ResidualCounts.values()):
+                    return True
+                nT_auxiliary = sum(ResidualCounts.values())
+                if nT_auxiliary < 0:  # extra available to form chains
+                    return False
+
                 # In best case all target nodes have degree kTmax, and chains
                 # are trees. To cover degree k in S requires n auxiliary target
                 # nodes such that kTmax + n(kTmax-2) >= k
@@ -265,10 +270,9 @@ def embedding_feasibility_filter(S: nx.Graph, T: nx.Graph, one_to_one: bool=Fals
                 min_auxiliary_necessary = sum(
                     [-v*np.ceil((k-kTmax)/(kTmax-2))
                      for k, v in ResidualCounts.items() if v<0])
-                if min_auxiliary_necessary > nT_auxiliary:
-                    return False
-
-    return True
+                return min_auxiliary_necessary <= nT_auxiliary:
+        else:
+            return True
 
 
 def raster_breadth_subgraph_upper_bound(T: nx.Graph=None) -> int:
