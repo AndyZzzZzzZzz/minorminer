@@ -270,7 +270,7 @@ def embedding_feasibility_filter(S: nx.Graph, T: nx.Graph, one_to_one: bool=Fals
                 min_auxiliary_necessary = sum(
                     [-v*np.ceil((k-kTmax)/(kTmax-2))
                      for k, v in ResidualCounts.items() if v<0])
-                return min_auxiliary_necessary <= nT_auxiliary:
+                return min_auxiliary_necessary <= nT_auxiliary
         else:
             return True
 
