@@ -49,7 +49,7 @@ def visualize_embeddings(H: nx.Graph, embeddings: list, prng: np.random.Generato
     """
     fig = plt.gcf()
     ax = plt.gca()
-    cmap = plt.get_cmap("turbo")
+    cmap = plt.get_cmap("turbo").copy()
     cmap.set_bad("lightgrey")
 
     # Create node color mapping
