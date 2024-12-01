@@ -10,7 +10,7 @@ from itertools import product
 import dwave_networkx as dnx
 from minorminer import find_embedding
 # Note Module will be renamed - remove comments later.
-from minorminer.utils.raster_embedding import (visualize_embeddings, #_embeddings.py
+from minorminer.utils.raster_embedding import (visualize_embeddings, #multiple_embeddings.py
                                                shuffle_graph, # subgraph.py
                                                find_multiple_embeddings, # parallel_embeddings.py
                                                raster_embedding_search, # parallel_embeddings.py
