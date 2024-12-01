@@ -307,7 +307,7 @@ def raster_breadth_subgraph_lower_bound(S: nx.Graph, T: nx.Graph=None, topology:
             'zephyr'. This is inferred from T by default. Any set value must
             be consistent with T (if T is not None).
         t: the tile parameter, relevant for zephyr and chimera
-            cases. Inferred from T by defaut. Any set value must be consistent
+            cases. Inferred from T by default. Any set value must be consistent
             with T (if T is not None).
         one_to_one: True if a subgraph embedding is assumed, False for general
             embeddings.
