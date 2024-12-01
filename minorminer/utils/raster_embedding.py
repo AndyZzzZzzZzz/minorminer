@@ -484,7 +484,7 @@ def raster_embedding_search(S: nx.Graph, T: nx.Graph, *, raster_breadth: int=Non
     return embs
 
 
-def embeddings_to_ndarray(embs, node_order=None):
+def embeddings_to_ndarray(embs: list, node_order=None):
     """Convert list of embeddings into an ndarray
 
     Note this assumes the target graph is labeled by integers and the embedding
@@ -492,7 +492,7 @@ def embeddings_to_ndarray(embs, node_order=None):
     minorminor.subgraph for the standard presentation of QPU graphs.
 
     Args:
-        embs (networkx.Graph): A list of embeddings, each list entry in the
+        embs (list of dict): A list of embeddings, each list entry in the
             form of a dictionary with integer values.
         node_order (iterable, optional): An iterable giving the ordering of
             variables in each row. When not provided variables are ordered to
