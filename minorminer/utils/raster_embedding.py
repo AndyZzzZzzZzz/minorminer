@@ -62,7 +62,7 @@ def visualize_embeddings(
     # Create node color mapping
     node_color_dict = {q: float("nan") for q in H.nodes()}
 
-    _embeddings = embeddings
+    _embeddings = embeddings.copy()
     if prng is not None:
         prng.shuffle(_embeddings)
     if one_to_iterable:
