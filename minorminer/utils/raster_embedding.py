@@ -574,7 +574,7 @@ def embeddings_to_ndarray(embs: list, node_order=None):
             by node_order.
     """
     if node_order is None:
-        if len(embs) is None:
+        if len(embs) == 0:
             raise ValueError("shape of ndarray cannot be inferred")
         else:
             node_order = embs[0].keys()
