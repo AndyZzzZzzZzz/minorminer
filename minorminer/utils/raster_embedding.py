@@ -37,8 +37,7 @@ def visualize_embeddings(
             dwave_networkx (e.g., chimera, pegasus, or zephyr graphs).
         embeddings (list of dict): A list of embeddings where each
             embedding is a dictionary mapping nodes of the source graph to
-            nodes in the target graph. If not provided, only the graph H
-            will be visualized without specific embeddings.
+            nodes in the target graph.
         prng (np.random.Generator): A pseudo-random number generator with
             an associated shuffle() operation. This is used to randomize
             the colormap assignment.
