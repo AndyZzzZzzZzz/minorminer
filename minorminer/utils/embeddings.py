@@ -21,6 +21,7 @@ import dwave_networkx as dnx
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
+from typing import Union 
 from collections import Counter
 
 from minorminer.subgraph import find_subgraph
@@ -29,7 +30,7 @@ from minorminer.subgraph import find_subgraph
 def visualize_embeddings(
     H: nx.Graph,
     embeddings: list,
-    prng: np.random.Generator = None,
+    prng: Union[np.random.RandomState, np.random.Generator] = None,
     one_to_iterable: bool = False,
     **kwargs,
 ) -> None:
