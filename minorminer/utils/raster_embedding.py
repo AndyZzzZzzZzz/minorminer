@@ -32,19 +32,20 @@ def visualize_embeddings(
     """Visualizes the embeddings using dwave_networkx's layout functions.
 
     Args:
-        H (networkx.Graph): The input graph to be visualized. If the graph
+        H: The input graph to be visualized. If the graph
             represents a specialized topology, it must be constructed using
             dwave_networkx (e.g., chimera, pegasus, or zephyr graphs).
-        embeddings (list of dict): A list of embeddings where each
+        embeddings: A list of embeddings where each
             embedding is a dictionary mapping nodes of the source graph to
             nodes in the target graph.
-        prng (np.random.Generator): A pseudo-random number generator with
+        prng: A pseudo-random number generator with
             an associated shuffle() operation. This is used to randomize
             the colormap assignment.
-        one_to_iterable (bool, optional): Determines how embedding mappings are interpreted.
-            Set to True to allow multiple target nodes to be associated with a single source node.
-            Use this option when embeddings map to multiple nodes per source. Defaults to `False` for
-            one-to-one embeddings where each source node maps to exactly one target node.
+        one_to_iterable: Determines how embedding mappings are interpreted.
+            Set to True to allow multiple target nodes to be associated with a
+            single source node. Use this option when embeddings map to multiple
+            nodes per source. Defaults to `False` for one-to-one embeddings
+            where each source node maps to exactly one target node.
         **kwargs: Additional keyword arguments passed to the drawing functions
             (e.g., node size, font size).
     Draws:
@@ -131,8 +132,22 @@ def visualize_embeddings(
     )
 
 
-def shuffle_graph(T, prng=None):
-    """Shuffle the node and edge ordering of a networkx graph."""
+def shuffle_graph(G: nx.Graph, prng=None) -> nx.Graph:
+    """Shuffle the node and edge ordering of a networkx graph.
+
+    For embedding methods that operate as a function of the node or edge
+    ordering this can force diversification in the returned embeddings. Note
+    that special orderings that encode graph structure or geometry may enhance
+    embedder performance (shuffling may lead to longer search times).
+
+    Args:
+        G (nx.Graph): A networkx graph
+        prng (np.random.Generator, optional): When provided, is used to shuffle
+            the order of nodes and edges in the source and target graph. This
+            can allow sampling from otherwise deterministic routines.
+    Returns:
+        nx.Graph: The same graph with modified node and edge ordering.
+    """
     if prng is None:
         prng = np.random.default_rng()
     nodes = list(T.nodes())
@@ -164,8 +179,8 @@ def find_multiple_embeddings(
     node order in S and/or T can be used for a non-deterministic pattern.
 
     Args:
-        S (networkx.Graph): The source graph to embed.
-        T (networkx.Graph): The target graph in which to embed.
+        S: The source graph to embed.
+        T: The target graph in which to embed.
         timeout (int, optional): Timeout per subgraph search in seconds.
             Defaults to 10. Note that timeout=0 implies unbounded time for the
             default ::code::`embedder=find_subgraph method`
@@ -183,10 +198,12 @@ def find_multiple_embeddings(
             parameter. Defaults to minorminer.subgraph.find_subgraph.
         embedder_kwargs (dict, optional): Specifies arguments for embedder
             other than S, T and timeout.
-        one_to_iterable (bool, optional): Determines how embedding mappings are interpreted.
-            Set to True to allow multiple target nodes to be associated with a single source node.
-            Use this option when embeddings map to multiple nodes per source. Defaults to `False` for
-            one-to-one embeddings where each source node maps to exactly one target node.
+        one_to_iterable (bool, optional): Determines how embedding mappings are
+            interpreted. Set to True to allow multiple target nodes to be
+            associated with a single source node. Use this option when
+            embeddings map to multiple nodes per source. Defaults to `False`
+            for one-to-one embeddings where each source node maps to exactly
+            one target node.
     Returns:
         list: A list of disjoint embeddings. Each embedding follows the format
             dictated by embedder. By default each embedding defines a 1:1 map
@@ -311,9 +328,8 @@ def raster_breadth_subgraph_upper_bound(T: nx.Graph = None) -> int:
     """Determines a raster breadth upper bound for subgraph embedding.
 
     Args:
-        T (networkx.Graph, optional): The target graph in which to embed. The
-            graph must be of type zephyr, pegasus or chimera and constructed by
-            dwave_networkx.
+        T: The target graph in which to embed. The graph must be of type
+            zephyr, pegasus or chimera and constructed by dwave_networkx.
     Returns:
         int: The maximum possible size of a tile
     """
@@ -439,36 +455,37 @@ def raster_embedding_search(
     """Searches for multiple embeddings within a rastered target graph.
 
     Args:
-        S (networkx.Graph): The source graph to embed.
-        T (networkx.Graph): The target graph in which to embed. If
+        S: The source graph to embed.
+        T: The target graph in which to embed. If
             raster_embedding is not None the graph must be of type zephyr,
             pegasus or chimera and constructed by dwave_networkx.
-        raster_breadth (int, optional): Raster breadth. If not specified
+        raster_breadth: Raster breadth. If not specified
            the full graph is searched. Using a smaller breadth can enable
            much faster search but might also prevent any embeddings being
            found, :code:`raster_breadth_subgraph_lower_bound()`
            provides a lower bound based on a fast feasibility filter.
-        timeout (int, optional): Timeout per subgraph search in seconds.
+        timeout: Timeout per subgraph search in seconds.
             Defaults to 10. Note that timeout=0 implies unbounded time for the
             default ::code::`embedder=find_subgraph method`
-        max_num_emb (int, optional): Maximum number of embeddings to find.
+        max_num_emb: Maximum number of embeddings to find.
             Defaults to inf (unbounded).
-        tile (networkx.Graph, optional): A subgraph representing a fundamental
+        tile: A subgraph representing a fundamental
             unit (tile) of the target graph `T` used for embedding. If none
-            provided, the tile is automatically generated based on the `raster_breadth`
-            and the family of `T` (chimera, pegasus, or zephyr).
-        skip_filter (bool, optional): Specifies whether to skip the subgraph
+            provided, the tile is automatically generated based on the
+            `raster_breadth` and the family of `T` (chimera, pegasus, or
+            zephyr).
+        skip_filter: Specifies whether to skip the subgraph
             lower bound filter. Defaults to True, meaning the filter is skipped.
-        prng (np.random.Generator, optional): If provided the ordering of
+        prng: If provided the ordering of
             mappings, nodes and edges of source and target graphs are all
             shuffled. This can allow sampling from otherwise deterministic
             routines.
-        embedder (Callable, optional): Specifies the embedding search method,
+        embedder: Specifies the embedding search method,
             a callable taking S, T as first two arguments and timeout as a
             parameter. Defaults to minorminer.subgraph.find_subgraph.
-        embedder_kwargs (dict, optional): Specifies arguments for embedder
+        embedder_kwargs: Dictionary specifying arguments for embedder
             other than S, T and timeout.
-        one_to_iterable (bool): If the embedder returns a dict with iterable
+        one_to_iterable: If the embedder returns a dict with iterable
             values set to True, otherwise where the values of nodes of the
             target graph set to False. False by default to match find_subgraph.
     Returns:
@@ -490,7 +507,7 @@ def raster_embedding_search(
             S=S, T=T, one_to_one=not one_to_iterable
         )
         if feasibility_bound is None or raster_breadth < feasibility_bound:
-            warnings.warn("raster_breadth < lower bound")
+            warnings.warn("raster_breadth < lower bound: embeddings will be empty.")
             return []
     # A possible feature enhancement might allow for raster_breadth to be
     # replaced by raster shape.
@@ -564,9 +581,9 @@ def embeddings_to_ndarray(embs: list, node_order=None):
     minorminor.subgraph for the standard presentation of QPU graphs.
 
     Args:
-        embs (list of dict): A list of embeddings, each list entry in the
+        embs: A list of embeddings, each list entry in the
             form of a dictionary with integer values.
-        node_order (iterable, optional): An iterable giving the ordering of
+        node_order: An iterable giving the ordering of
             variables in each row. When not provided variables are ordered to
             match the first embedding :code:`embs[0].keys()`
     Returns:
@@ -599,7 +616,8 @@ if __name__ == "__main__":
         raster_breadth_S = smallest_tile[stopology] + 1
         S = generators[stopology](raster_breadth_S)
 
-        # For each target topology, checks whether embedding the graph S into that topology is feasible
+        # For each target topology, checks whether embedding the graph S into
+        # that topology is feasible
         for ttopology in topologies:
             raster_breadth = raster_breadth_subgraph_lower_bound(
                 S, topology=ttopology, one_to_one=True
