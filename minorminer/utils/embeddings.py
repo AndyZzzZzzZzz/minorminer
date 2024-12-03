@@ -558,10 +558,7 @@ def find_sublattice_embeddings(
             "source graphs must a graph constructed by "
             "dwave_networkx as chimera, pegasus or zephyr type"
         )
-    if tile == S:
-        tiling = True
-    else:
-        tiling = False
+    tiling = tile == S
     embs = []
     if max_num_emb == 1 and prng is None:
         _T = T
