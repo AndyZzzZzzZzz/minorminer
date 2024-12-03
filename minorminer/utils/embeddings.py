@@ -30,7 +30,7 @@ from minorminer.subgraph import find_subgraph
 def visualize_embeddings(
     H: nx.Graph,
     embeddings: list,
-    prng: Union[np.random.RandomState, np.random.Generator] = None,
+    seed: Union[int, np.random.RandomState, np.random.Generator] = None,
     one_to_iterable: bool = False,
     **kwargs,
 ) -> None:
@@ -43,9 +43,8 @@ def visualize_embeddings(
         embeddings: A list of embeddings where each
             embedding is a dictionary mapping nodes of the source graph to
             nodes in the target graph.
-        prng: A pseudo-random number generator with
-            an associated shuffle() operation. This is used to randomize
-            the colormap assignment.
+        seed: A seed for pseudo-random number generator. When provided, 
+            is used to randomize the colormap assignment.
         one_to_iterable: Determines how embedding mappings are interpreted.
             Set to True to allow multiple target nodes to be associated with a
             single source node. Use this option when embeddings map to multiple
@@ -68,7 +67,11 @@ def visualize_embeddings(
     node_color_dict = {q: float("nan") for q in H.nodes()}
 
     _embeddings = embeddings.copy()
-    if prng is not None:
+    if seed is not None:
+        if isinstance(seed, np.random.Generator):
+            prng = seed
+        else:
+            prng = np.random.default_rng(seed=seed)
         prng.shuffle(_embeddings)
     if one_to_iterable:
         node_color_dict.update(
