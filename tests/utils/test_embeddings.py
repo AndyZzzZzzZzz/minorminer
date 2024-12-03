@@ -64,7 +64,7 @@ class TestEmbeddings(unittest.TestCase):
             # plt.show()  # Temporary
             prng = np.random.default_rng()
             # plt.figure(f'3 {b} {o}')  # Temporary
-            visualize_embeddings(T, embeddings, prng=prng, one_to_iterable=o)
+            visualize_embeddings(T, embeddings, seed=prng, one_to_iterable=o)
             # plt.show()  # Temporary
 
     def test_shuffle_graph(self):
@@ -78,9 +78,9 @@ class TestEmbeddings(unittest.TestCase):
 
         seed = 42
         prng1 = np.random.default_rng(seed)
-        G1 = shuffle_graph(T, prng=prng1)
+        G1 = shuffle_graph(T, seed=prng1)
         prng2 = np.random.default_rng(seed)
-        G2 = shuffle_graph(T, prng=prng2)
+        G2 = shuffle_graph(T, seed=prng2)
         self.assertEqual(
             list(G1.nodes), list(G2.nodes), "seed does not allow reproducibility"
         )
@@ -88,7 +88,7 @@ class TestEmbeddings(unittest.TestCase):
             list(G1.edges), list(G2.edges), "seed does not allow reproducibility"
         )
         prng3 = np.random.default_rng(seed + 1)
-        G2 = shuffle_graph(T, prng=prng3)
+        G2 = shuffle_graph(T, seed=prng3)
         self.assertNotEqual(
             list(G1.nodes), list(G2.nodes), "different seeds give same Graph"
         )
@@ -175,14 +175,14 @@ class TestEmbeddings(unittest.TestCase):
 
         seed = 42
         prng1 = np.random.default_rng(seed)
-        embs_run1 = find_multiple_embeddings(S, T, max_num_emb=4, prng=prng1)
+        embs_run1 = find_multiple_embeddings(S, T, max_num_emb=4, seed=prng1)
 
         prng2 = np.random.default_rng(seed)
-        embs_run2 = find_multiple_embeddings(S, T, max_num_emb=4, prng=prng2)
+        embs_run2 = find_multiple_embeddings(S, T, max_num_emb=4, seed=prng2)
         self.assertEqual(embs_run1, embs_run2, "seed does not allow reproducibility")
 
         prng3 = np.random.default_rng(seed + 1)
-        embs_run3 = find_multiple_embeddings(S, T, max_num_emb=4, prng=prng3)
+        embs_run3 = find_multiple_embeddings(S, T, max_num_emb=4, seed=prng3)
         self.assertNotEqual(
             embs_run1,
             embs_run3,
