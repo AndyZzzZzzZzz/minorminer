@@ -30,6 +30,7 @@ from minorminer.subgraph import find_subgraph
 def visualize_embeddings(
     G: nx.Graph,
     embeddings: list,
+    S: nx.Graph = None, 
     seed: Union[int, np.random.RandomState, np.random.Generator] = None,
     one_to_iterable: bool = False,
     **kwargs,
@@ -43,6 +44,8 @@ def visualize_embeddings(
         embeddings: A list of embeddings where each
             embedding is a dictionary mapping nodes of the source graph to
             nodes in the target graph.
+        S: The input source graph to be visualized. If provided, only edges 
+            that corresponds to the source graph would be visualized.
         seed: A seed for pseudo-random number generator. When provided, 
             is used to randomize the colormap assignment.
         one_to_iterable: Determines how embedding mappings are interpreted.
@@ -89,7 +92,7 @@ def visualize_embeddings(
 
     # Create edge color mapping
     edge_color_dict = {}
-    for v1, v2 in H.edges():
+    for v1, v2 in G.edges():
         if node_color_dict[v1] == node_color_dict[v2]:
             edge_color_dict[(v1, v2)] = node_color_dict[v1]
         else:
@@ -98,7 +101,7 @@ def visualize_embeddings(
     # Default drawing arguments
     draw_kwargs = {
         "G": G,
-        "node_color": [node_color_dict[q] for q in H.nodes()],
+        "node_color": [node_color_dict[q] for q in G.nodes()],
         "edge_color": "lightgrey",
         "node_shape": "o",
         "ax": ax,
@@ -106,7 +109,7 @@ def visualize_embeddings(
         "width": 1,
         "cmap": cmap,
         "edge_cmap": cmap,
-        "node_size": 300 / np.sqrt(H.number_of_nodes()),
+        "node_size": 300 / np.sqrt(G.number_of_nodes()),
     }
     draw_kwargs.update(kwargs)
 
@@ -126,7 +129,7 @@ def visualize_embeddings(
         nx.draw_networkx(**draw_kwargs)
 
     # Recolor specific edges on top of the original graph
-    highlight_edges = [e for e in H.edges() if not np.isnan(edge_color_dict[e])]
+    highlight_edges = [e for e in G.edges() if not np.isnan(edge_color_dict[e])]
     highlight_colors = [edge_color_dict[e] for e in highlight_edges]
 
     nx.draw_networkx_edges(
