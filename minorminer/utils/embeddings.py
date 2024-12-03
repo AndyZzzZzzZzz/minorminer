@@ -28,7 +28,7 @@ from minorminer.subgraph import find_subgraph
 
 
 def visualize_embeddings(
-    H: nx.Graph,
+    G: nx.Graph,
     embeddings: list,
     seed: Union[int, np.random.RandomState, np.random.Generator] = None,
     one_to_iterable: bool = False,
@@ -37,7 +37,7 @@ def visualize_embeddings(
     """Visualizes the embeddings using dwave_networkx's layout functions.
 
     Args:
-        H: The input graph to be visualized. If the graph
+        G: The input target graph to be visualized. If the graph
             represents a specialized topology, it must be constructed using
             dwave_networkx (e.g., chimera, pegasus, or zephyr graphs).
         embeddings: A list of embeddings where each
@@ -64,7 +64,7 @@ def visualize_embeddings(
     cmap.set_bad("lightgrey")
 
     # Create node color mapping
-    node_color_dict = {q: float("nan") for q in H.nodes()}
+    node_color_dict = {q: float("nan") for q in G.nodes()}
 
     _embeddings = embeddings.copy()
     if seed is not None:
@@ -97,7 +97,7 @@ def visualize_embeddings(
 
     # Default drawing arguments
     draw_kwargs = {
-        "G": H,
+        "G": G,
         "node_color": [node_color_dict[q] for q in H.nodes()],
         "edge_color": "lightgrey",
         "node_shape": "o",
@@ -110,19 +110,19 @@ def visualize_embeddings(
     }
     draw_kwargs.update(kwargs)
 
-    topology = H.graph.get("family")
+    topology = G.graph.get("family")
     # Draw the combined graph with color mappings
     if topology == "chimera":
-        pos = dnx.chimera_layout(H)
+        pos = dnx.chimera_layout(G)
         dnx.draw_chimera(**draw_kwargs)
     elif topology == "pegasus":
-        pos = dnx.pegasus_layout(H)
+        pos = dnx.pegasus_layout(G)
         dnx.draw_pegasus(**draw_kwargs)
     elif topology == "zephyr":
-        pos = dnx.zephyr_layout(H)
+        pos = dnx.zephyr_layout(G)
         dnx.draw_zephyr(**draw_kwargs)
     else:
-        pos = nx.spring_layout(H)
+        pos = nx.spring_layout(G)
         nx.draw_networkx(**draw_kwargs)
 
     # Recolor specific edges on top of the original graph
@@ -130,7 +130,7 @@ def visualize_embeddings(
     highlight_colors = [edge_color_dict[e] for e in highlight_edges]
 
     nx.draw_networkx_edges(
-        H,
+        G,
         pos=pos,
         edgelist=highlight_edges,
         edge_color=highlight_colors,
