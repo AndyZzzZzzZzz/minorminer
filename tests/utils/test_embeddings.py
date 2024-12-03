@@ -1,5 +1,16 @@
-# test_raster_embedding.py
-
+# Copyright 2024 D-Wave
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import unittest
 import os
 import numpy as np
@@ -12,14 +23,14 @@ import dwave_networkx as dnx
 from minorminer import find_embedding
 
 # Note Module will be renamed - remove comments later.
-from minorminer.utils.raster_embedding import (
+from minorminer.utils.embeddings import (
     visualize_embeddings,  # multiple_embeddings.py
     shuffle_graph,  # subgraph.py
     find_multiple_embeddings,  # parallel_embeddings.py
-    raster_embedding_search,  # parallel_embeddings.py
+    find_sublattice_embeddings,  # parallel_embeddings.py
     embedding_feasibility_filter,  # feasibility.py
-    raster_breadth_subgraph_upper_bound,  # feasibility.py
-    raster_breadth_subgraph_lower_bound,
+    raster_breadth_upper_bound,  # feasibility.py
+    raster_breadth_lower_bound,
 )  # feasibility.py
 
 _display = os.environ.get("DISPLAY", "") != ""
@@ -244,37 +255,37 @@ class TestRasterEmbedding(unittest.TestCase):
     def testRasterBreadthSubgraphUpperBound(self):
         L = np.random.randint(2) + 2
         T = dnx.zephyr_graph(L - 1)
-        self.assertEqual(L - 1, raster_breadth_subgraph_upper_bound(T=T))
+        self.assertEqual(L - 1, raster_breadth_upper_bound(T=T))
         T = dnx.pegasus_graph(L)
-        self.assertEqual(L, raster_breadth_subgraph_upper_bound(T=T))
+        self.assertEqual(L, raster_breadth_upper_bound(T=T))
         T = dnx.chimera_graph(L, L - 1, 1)
-        self.assertEqual(L, raster_breadth_subgraph_upper_bound(T=T))
+        self.assertEqual(L, raster_breadth_upper_bound(T=T))
 
     def testRasterBreadthSubgraphLowerBound(self):
         L = np.random.randint(2) + 2
         T = dnx.zephyr_graph(L - 1)
-        self.assertEqual(L - 1, raster_breadth_subgraph_lower_bound(S=T, T=T))
+        self.assertEqual(L - 1, raster_breadth_lower_bound(S=T, T=T, one_to_one=True))
         self.assertEqual(
-            L - 1, raster_breadth_subgraph_lower_bound(S=T, topology="zephyr")
+            L - 1, raster_breadth_lower_bound(S=T, topology="zephyr", one_to_one=True)
         )
         T = dnx.pegasus_graph(L)
-        self.assertEqual(L, raster_breadth_subgraph_lower_bound(S=T, T=T))
+        self.assertEqual(L, raster_breadth_lower_bound(S=T, T=T, one_to_one=True))
         self.assertEqual(
-            L, raster_breadth_subgraph_lower_bound(S=T, topology="pegasus")
+            L, raster_breadth_lower_bound(S=T, topology="pegasus", one_to_one=True)
         )
         T = dnx.chimera_graph(L, L - 1, 1)
-        self.assertEqual(L, raster_breadth_subgraph_lower_bound(S=T, T=T))
+        self.assertEqual(L, raster_breadth_lower_bound(S=T, T=T, one_to_one=True))
         self.assertEqual(
-            L, raster_breadth_subgraph_lower_bound(S=T, topology="chimera", t=1)
+            L, raster_breadth_lower_bound(S=T, topology="chimera", t=1, one_to_one=True)
         )
 
         m = 6
         S = dnx.chimera_graph(m)  # Embeds onto Zephyr[m//2]
         self.assertEqual(
-            m // 2, raster_breadth_subgraph_lower_bound(S=S, topology="zephyr")
+            m // 2, raster_breadth_lower_bound(S=S, topology="zephyr", one_to_one=True)
         )
         T = dnx.zephyr_graph(m)
-        self.assertEqual(m // 2, raster_breadth_subgraph_lower_bound(S=S, T=T))
+        self.assertEqual(m // 2, raster_breadth_lower_bound(S=S, T=T, one_to_one=True))
 
     def testRasterEmbeddingSearchBasic(self):
         for topology in ["chimera", "pegasus", "zephyr"]:
@@ -294,10 +305,10 @@ class TestRasterEmbedding(unittest.TestCase):
                 T = dnx.zephyr_graph(min_raster_scale + 1)
                 num_emb = 2
 
-            embs = raster_embedding_search(S, T, raster_breadth=min_raster_scale)
+            embs = find_sublattice_embeddings(S, T, raster_breadth=min_raster_scale)
             self.assertEqual(len(embs), 1, "mismatched number of embeddings")
 
-            embs = raster_embedding_search(
+            embs = find_sublattice_embeddings(
                 S, T, raster_breadth=min_raster_scale, max_num_emb=float("Inf")
             )
             self.assertEqual(len(embs), num_emb, "mismatched number of embeddings")
