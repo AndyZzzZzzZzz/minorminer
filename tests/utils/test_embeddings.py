@@ -39,7 +39,7 @@ _display = os.environ.get("DISPLAY", "") != ""
 class TestEmbeddings(unittest.TestCase):
 
     @unittest.skipUnless(_display, " No display found")
-    def testVisualizeEmbeddings(self):
+    def test_visualize_embeddings(self):
         # plt.figure(1)  # Temporary
         embeddings = [{}]
         T = dnx.chimera_graph(2)
@@ -67,7 +67,7 @@ class TestEmbeddings(unittest.TestCase):
             visualize_embeddings(T, embeddings, prng=prng, one_to_iterable=o)
             # plt.show()  # Temporary
 
-    def testShuffleGraph(self):
+    def test_shuffle_graph(self):
         prng = np.random.default_rng()
         T = dnx.zephyr_graph(1)
         Ts = shuffle_graph(T, prng)
@@ -96,7 +96,7 @@ class TestEmbeddings(unittest.TestCase):
             list(G1.edges), list(G2.edges), "different seeds give same Graph"
         )
 
-    def testFindMultipleEmbeddingsBasic(self):
+    def test_find_multiple_embeddings_basic(self):
         square = {
             ((0, 0), (0, 1)),
             ((0, 1), (1, 1)),
@@ -136,7 +136,7 @@ class TestEmbeddings(unittest.TestCase):
         value_list = [v for emb in embs for v in emb.values()]
         self.assertEqual(len(set(value_list)), len(value_list), "embeddings overlap")
 
-    def testFindMultipleEmbeddingsAdvanced(self):
+    def test_find_multiple_embeddings_advanced(self):
         # timeout
         m = 3  # Feasible, but takes significantly more than a second
         S = dnx.chimera_graph(2 * m)
@@ -215,7 +215,7 @@ class TestEmbeddings(unittest.TestCase):
         # NB - ordering within chains can change (seems to!)
         self.assertTrue(all(set(emb[i]) == set(embs[0][i]) for i in range(3)))
 
-    def testSubgraphEmbeddingFeasibilityFilter(self):
+    def test_subgraph_embedding_feasibility_filter(self):
         m = 7  # Odd m
         T = dnx.chimera_graph(m)
         S = dnx.chimera_graph(m - 1)
@@ -252,7 +252,7 @@ class TestEmbeddings(unittest.TestCase):
         )
         # Check tetrahedron cannot be embedded on a graph with a triangle + 0,1,2 connectivity nodes.
 
-    def testGraphRowsSubgraphUpperBound(self):
+    def test_graph_rows_subgraph_upper_bound(self):
         L = np.random.randint(2) + 2
         T = dnx.zephyr_graph(L - 1)
         self.assertEqual(L - 1, graph_rows_upper_bound(T=T))
@@ -261,7 +261,7 @@ class TestEmbeddings(unittest.TestCase):
         T = dnx.chimera_graph(L, L - 1, 1)
         self.assertEqual(L, graph_rows_upper_bound(T=T))
 
-    def testGraphRowsSubgraphLowerBound(self):
+    def test_graph_rows_subgraph_lower_bound(self):
         L = np.random.randint(2) + 2
         T = dnx.zephyr_graph(L - 1)
         self.assertEqual(L - 1, graph_rows_lower_bound(S=T, T=T, one_to_one=True))
@@ -287,7 +287,7 @@ class TestEmbeddings(unittest.TestCase):
         T = dnx.zephyr_graph(m)
         self.assertEqual(m // 2, graph_rows_lower_bound(S=S, T=T, one_to_one=True))
 
-    def testFindSublatticeEmbeddingsBasic(self):
+    def test_find_sublattice_embeddings_basic(self):
         # defaults and basic arguments
         for topology in ["chimera", "pegasus", "zephyr"]:
             if topology == "chimera":
@@ -326,7 +326,7 @@ class TestEmbeddings(unittest.TestCase):
                 len(set(value_list)), len(value_list), "embeddings overlap"
             )
 
-    def testFindSublatticeEmbeddingsTile(self):
+    def test_find_sublattice_embeddings_tile(self):
         # Check function responds correctly to tile specification
         topology = "chimera"
         min_graph_rows = 1
