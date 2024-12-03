@@ -453,7 +453,7 @@ def find_sublattice_embeddings(
     max_num_emb: int = 1,
     tile: nx.Graph = None,
     skip_filter: bool = True,
-    prng: np.random.Generator = None,
+    seed: Union[int, np.random.RandomState, np.random.Generator] = None,
     embedder: callable = None,
     embedder_kwargs: dict = None,
     one_to_iterable: bool = False,
@@ -490,7 +490,7 @@ def find_sublattice_embeddings(
             graph.
         skip_filter: Specifies whether to skip the subgraph
             lower bound filter. Defaults to True, meaning the filter is skipped.
-        prng: If provided the ordering of
+        seed: If provided the ordering of
             mappings, nodes and edges of source and target graphs are all
             shuffled. This can allow sampling from otherwise deterministic
             routines.
@@ -511,7 +511,7 @@ def find_sublattice_embeddings(
             T=T,
             timeout=timeout,
             max_num_emb=max_num_emb,
-            prng=prng,
+            seed=seed,
             embedder=embedder,
             embedder_kwargs=embedder_kwargs,
         )
@@ -562,13 +562,17 @@ def find_sublattice_embeddings(
         )
     tiling = tile == S
     embs = []
-    if max_num_emb == 1 and prng is None:
+    if max_num_emb == 1 and seed is None:
         _T = T
     else:
         _T = T.copy()
 
-    if prng is not None:
+    if seed is not None:
         sublattice_iter = list(sublattice_mappings(tile, _T))
+        if isinstance(seed, np.random.Generator):
+            prng = seed
+        else:
+            prng = np.random.default_rng(seed=seed)
         prng.shuffle(sublattice_iter)
     else:
         sublattice_iter = sublattice_mappings(tile, _T)
@@ -587,7 +591,7 @@ def find_sublattice_embeddings(
                 max_num_emb=max_num_emb,
                 timeout=timeout,
                 skip_filter=skip_filter,
-                prng=prng,
+                seed=seed,
                 embedder=embedder,
                 embedder_kwargs=embedder_kwargs,
             )
