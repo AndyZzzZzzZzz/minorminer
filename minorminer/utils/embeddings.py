@@ -137,7 +137,7 @@ def visualize_embeddings(
     )
 
 
-def shuffle_graph(G: nx.Graph, prng=None) -> nx.Graph:
+def shuffle_graph(G: nx.Graph, seed: Union[int, np.random.RandomState, np.random.Generator] = None) -> nx.Graph:
     """Shuffle the node and edge ordering of a networkx graph.
 
     For embedding methods that operate as a function of the node or edge
@@ -146,15 +146,16 @@ def shuffle_graph(G: nx.Graph, prng=None) -> nx.Graph:
     embedder performance (shuffling may lead to longer search times).
 
     Args:
-        G (nx.Graph): A networkx graph
-        prng (np.random.Generator, optional): When provided, is used to shuffle
-            the order of nodes and edges in the source and target graph. This
-            can allow sampling from otherwise deterministic routines.
+        G: A networkx graph
+        seed: When provided, is used to shuffle the order of nodes and edges in 
+        the source and target graph. This can allow sampling from otherwise deterministic routines.
     Returns:
         nx.Graph: The same graph with modified node and edge ordering.
     """
-    if prng is None:
-        prng = np.random.default_rng()
+    if isinstance(seed, np.random.Generator):
+        prng = seed
+    else:
+        prng = np.random.default_rng(seed=seed)
     nodes = list(G.nodes())
     prng.shuffle(nodes)
     edges = list(G.edges())
@@ -172,7 +173,7 @@ def find_multiple_embeddings(
     timeout: int = 10,
     max_num_emb: int = 1,
     skip_filter: bool = True,
-    prng: np.random.Generator = None,
+    seed: Union[int, np.random.RandomState, np.random.Generator] = None,
     embedder: callable = None,
     embedder_kwargs: dict = None,
     one_to_iterable: bool = False,
@@ -195,7 +196,7 @@ def find_multiple_embeddings(
             lower bound filter. Defaults to `True`, meaning the filter is skipped.
             The filter is specific to subgraph embedders, and skip_filter should
             always be `True` when embedder is not a subgraph search method.
-        prng (np.random.Generator, optional): When provided, is used to shuffle
+        seed (np.random.Generator, optional): When provided, is used to shuffle
             the order of nodes and edges in the source and target graph. This
             can allow sampling from otherwise deterministic routines.
         embedder (Callable, optional): Specifies the embedding search method,
@@ -222,18 +223,18 @@ def find_multiple_embeddings(
     elif embedder_kwargs is None:
         embedder_kwargs = {}
 
-    if max_num_emb == 1 and prng is not None:
+    if max_num_emb == 1 and seed is not None:
         _T = T
     else:
         max_num_emb = min(int(T.number_of_nodes() / S.number_of_nodes()), max_num_emb)
-        if prng is None:
+        if seed is None:
             _T = T.copy()
         else:
-            _T = shuffle_graph(T, prng)
-    if prng is None:
+            _T = shuffle_graph(T, seed=seed)
+    if seed is None:
         _S = S
     else:
-        _S = shuffle_graph(S, prng)
+        _S = shuffle_graph(S, seed=seed)
 
     for _ in range(max_num_emb):
         # A potential feature enhancement would be to allow different embedding
