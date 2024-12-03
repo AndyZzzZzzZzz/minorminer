@@ -328,8 +328,8 @@ def embedding_feasibility_filter(
             return True
 
 
-def raster_breadth_upper_bound(T: nx.Graph = None) -> int:
-    """Determines a raster breadth upper bound for subgraph embedding.
+def graph_rows_upper_bound(T: nx.Graph = None) -> int:
+    """Determines a graph rows upper bound for subgraph embedding.
 
     Args:
         T: The target graph in which to embed. The graph must be of type
@@ -340,7 +340,7 @@ def raster_breadth_upper_bound(T: nx.Graph = None) -> int:
     return max(T.graph.get("rows"), T.graph.get("columns"))
 
 
-def raster_breadth_lower_bound(
+def graph_rows_lower_bound(
     S: nx.Graph,
     T: nx.Graph = None,
     topology: str = None,
@@ -370,8 +370,8 @@ def raster_breadth_lower_bound(
         one_to_one: True if a subgraph embedding is assumed, False for general
             embeddings.
     Returns
-        float: minimum raster_breadth for embedding to be feasible. Returns
-            None if embedding for any raster breadth is infeasible.
+        float: minimum graph_rows for embedding to be feasible. Returns
+            None if embedding for any number of graph rows is infeasible.
     """
     # Comment, similar bounds are possible allowing for minor embeddings,
     # the degree distribution is bounded as chain length increases, whilst
@@ -409,44 +409,44 @@ def raster_breadth_lower_bound(
         ):
             return None
 
-        def generator(raster_breadth):
-            return dnx.chimera_graph(m=raster_breadth, n=raster_breadth, t=t)
+        def generator(graph_rows):
+            return dnx.chimera_graph(m=graph_rows, n=graph_rows, t=t)
 
         # A lower bound based on number of variables N = m*n*2*t
-        raster_breadth = np.ceil(np.sqrt(N / 4 / t))
+        graph_rows = np.ceil(np.sqrt(N / 4 / t))
     elif topology == "pegasus":
 
-        def generator(raster_breadth):
-            return dnx.pegasus_graph(m=raster_breadth)
+        def generator(graph_rows):
+            return dnx.pegasus_graph(m=graph_rows)
 
         # A lower bound based on number of variables N = (m*24-8)*(m-1)
-        raster_breadth = np.ceil(1 / 12 * (8 + np.sqrt(6 * N + 16)))
+        graph_rows = np.ceil(1 / 12 * (8 + np.sqrt(6 * N + 16)))
     elif topology == "zephyr":
 
-        def generator(raster_breadth):
-            return dnx.zephyr_graph(m=raster_breadth, t=t)
+        def generator(graph_rows):
+            return dnx.zephyr_graph(m=graph_rows, t=t)
 
         # A lower bound based on number of variables N = (2m+1)*m*4*t
-        raster_breadth = np.ceil((np.sqrt(2 * N / t + 1) - 1) / 4)
+        graph_rows = np.ceil((np.sqrt(2 * N / t + 1) - 1) / 4)
     else:
         raise ValueError(
             "source graphs must be a graph constructed by "
             "dwave_networkx as chimera, pegasus or zephyr type"
         )
     # Evaluate tile feasibility (defect free subgraphs)
-    raster_breadth = round(raster_breadth)
-    tile = generator(raster_breadth=raster_breadth)
+    graph_rows = round(graph_rows)
+    tile = generator(graph_rows=graph_rows)
     while embedding_feasibility_filter(S, tile, one_to_one) is False:
-        raster_breadth += 1
-        tile = generator(raster_breadth=raster_breadth)
-    return raster_breadth
+        graph_rows += 1
+        tile = generator(graph_rows=graph_rows)
+    return graph_rows
 
 
 def find_sublattice_embeddings(
     S: nx.Graph,
     T: nx.Graph,
     *,
-    raster_breadth: int = None,
+    graph_rows: int = None,
     timeout: int = 10,
     max_num_emb: int = 1,
     tile: nx.Graph = None,
@@ -456,7 +456,7 @@ def find_sublattice_embeddings(
     embedder_kwargs: dict = None,
     one_to_iterable: bool = False,
 ) -> list:
-    """Searches for multiple embeddings within a rastered target graph.
+    """Searches for embeddings on sublattices of the target graph.
 
     See https://doi.org/10.3389/fcomp.2023.1238988 for examples of usage.
 
@@ -465,10 +465,11 @@ def find_sublattice_embeddings(
         T: The target graph in which to embed. If
             raster_embedding is not None the graph must be of type zephyr,
             pegasus or chimera and constructed by dwave_networkx.
-        raster_breadth: Raster breadth. If not specified
+        graph_rows: The number of (cell) rows (m) defining the square
+           sublattice of T. If not specified
            the full graph is searched. Using a smaller breadth can enable
            much faster search but might also prevent any embeddings being
-           found, :code:`raster_breadth_lower_bound()`
+           found, :code:`graph_rows_lower_bound()`
            provides a lower bound based on a fast feasibility filter.
         timeout: Timeout per subgraph search in seconds.
             Defaults to 10. Note that timeout=0 implies unbounded time for the
@@ -478,10 +479,13 @@ def find_sublattice_embeddings(
         tile: A subgraph representing a fundamental
             unit (tile) of the target graph `T` used for embedding. If none
             provided, the tile is automatically generated based on the
-            `raster_breadth` and the family of `T` (chimera, pegasus, or
+            `graph_rows` and the family of `T` (chimera, pegasus, or
             zephyr).
-            Note that if tile==S the embedder is bypassed since it is sufficient
-            to check for lost edges.
+            If tile==S, the embedder is bypassed since it is sufficient
+            to check for lost edges. The source graph should be consistent with
+            the target graph parameterized by m (graph rows), this allows a
+            fast replication of the source graph embedding across a larger
+            graph.
         skip_filter: Specifies whether to skip the subgraph
             lower bound filter. Defaults to True, meaning the filter is skipped.
         prng: If provided the ordering of
@@ -493,13 +497,13 @@ def find_sublattice_embeddings(
             parameter. Defaults to minorminer.subgraph.find_subgraph.
         embedder_kwargs: Dictionary specifying arguments for embedder
             other than S, T and timeout.
-        one_to_iterable: If the embedder returns a dict with iterable
+        one_to_iterable: If the embedder returns a dict with iterables
             values set to True, otherwise where the values of nodes of the
             target graph set to False. False by default to match find_subgraph.
     Returns:
         list: A list of disjoint embeddings.
     """
-    if raster_breadth is None:
+    if graph_rows is None:
         return find_multiple_embeddings(
             S=S,
             T=T,
@@ -511,29 +515,44 @@ def find_sublattice_embeddings(
         )
 
     if not skip_filter:
-        feasibility_bound = raster_breadth_lower_bound(
+        feasibility_bound = graph_rows_lower_bound(
             S=S, T=T, one_to_one=not one_to_iterable
         )
-        if feasibility_bound is None or raster_breadth < feasibility_bound:
-            warnings.warn("raster_breadth < lower bound: embeddings will be empty.")
+        if feasibility_bound is None or graph_rows < feasibility_bound:
+            warnings.warn("graph_rows < lower bound: embeddings will be empty.")
             return []
-    # A possible feature enhancement might allow for raster_breadth to be
-    # replaced by raster shape.
+    # A possible feature enhancement might allow for graph_rows (m) to be
+    # replaced by shape: (m,t) [zephyr] or (m,n,t) [Chimera]
     family = T.graph.get("family")
     if family == "chimera":
         sublattice_mappings = dnx.chimera_sublattice_mappings
         t = T.graph["tile"]
         if tile is None:
-            tile = dnx.chimera_graph(m=raster_breadth, n=raster_breadth, t=t)
+            tile = dnx.chimera_graph(m=graph_rows, n=graph_rows, t=t)
+        elif (
+            not skip_filter
+            and embedding_feasibility_filter(S, tile, one_to_one) is False
+        ):
+            raise ValueError("S is too large for given tile")
     elif family == "pegasus":
         sublattice_mappings = dnx.pegasus_sublattice_mappings
         if tile is None:
-            tile = dnx.pegasus_graph(m=raster_breadth)
+            tile = dnx.pegasus_graph(m=graph_rows)
+        elif (
+            not skip_filter
+            and embedding_feasibility_filter(S, tile, one_to_one) is False
+        ):
+            raise ValueError("S is too large for given tile")
     elif family == "zephyr":
         sublattice_mappings = dnx.zephyr_sublattice_mappings
         t = T.graph["tile"]
         if tile is None:
-            tile = dnx.zephyr_graph(m=raster_breadth, t=t)
+            tile = dnx.zephyr_graph(m=graph_rows, t=t)
+        elif (
+            not skip_filter
+            and embedding_feasibility_filter(S, tile, one_to_one) is False
+        ):
+            raise ValueError("S is too large for given tile")
     else:
         raise ValueError(
             "source graphs must a graph constructed by "
@@ -616,7 +635,7 @@ def embeddings_to_ndarray(embs: list, node_order=None):
 
 
 if __name__ == "__main__":
-    print(" min raster scale examples ")
+    print(" min m (graph rows) examples ")
 
     # Define the Graph Topologies, Tiles, and Generators
     topologies = ["chimera", "pegasus", "zephyr"]
@@ -629,38 +648,36 @@ if __name__ == "__main__":
 
     # Iterate over Topologies for Raster Embedding Checks
     for stopology in topologies:
-        raster_breadth_S = smallest_tile[stopology] + 1
-        S = generators[stopology](raster_breadth_S)
+        graph_rows_S = smallest_tile[stopology] + 1
+        S = generators[stopology](graph_rows_S)
 
         # For each target topology, checks whether embedding the graph S into
         # that topology is feasible
         for ttopology in topologies:
-            raster_breadth = raster_breadth_lower_bound(
-                S, topology=ttopology, one_to_one=True
-            )
-            if raster_breadth is None:
+            graph_rows = graph_rows_lower_bound(S, topology=ttopology, one_to_one=True)
+            if graph_rows is None:
                 print(
-                    f"Embedding {stopology}-{raster_breadth_S} in "
+                    f"Embedding {stopology}-{graph_rows_S} in "
                     f"{ttopology} is infeasible."
                 )
             else:
                 print(
-                    f"Embedding {stopology}-{raster_breadth_S} in "
-                    f"{ttopology} may be feasible, requires raster_breadth "
-                    f">= {raster_breadth}."
+                    f"Embedding {stopology}-{graph_rows_S} in "
+                    f"{ttopology} may be feasible, requires graph_rows "
+                    f">= {graph_rows}."
                 )
             T = generators[ttopology](smallest_tile[ttopology])
-            raster_breadth = raster_breadth_lower_bound(S, T=T)
-            if raster_breadth is None:
+            graph_rows = graph_rows_lower_bound(S, T=T)
+            if graph_rows is None:
                 print(
-                    f"Embedding {stopology}-{raster_breadth_S} in "
+                    f"Embedding {stopology}-{graph_rows_S} in "
                     f"{ttopology}-{smallest_tile[ttopology]} is infeasible."
                 )
             else:
                 print(
-                    f"Embedding {stopology}-{raster_breadth_S} in "
+                    f"Embedding {stopology}-{graph_rows_S} in "
                     f"{ttopology}-{smallest_tile[ttopology]} may be feasible"
-                    f", requires raster_breadth >= {raster_breadth}."
+                    f", requires graph_rows >= {graph_rows}."
                 )
     print()
     print(" raster embedding examples ")
@@ -674,7 +691,7 @@ if __name__ == "__main__":
         print(topology)
         # Perform Embedding Search and Validation
         embs = find_sublattice_embeddings(
-            S, T, raster_breadth=min_raster_scale, max_num_emb=float("inf")
+            S, T, graph_rows=min_raster_scale, max_num_emb=float("inf")
         )
         print(f"{len(embs)} Independent embeddings by rastering")
         print(embs)
@@ -696,4 +713,4 @@ if __name__ == "__main__":
         print("Defaults (full graph search): Presented as an ndarray")
         print(embeddings_to_ndarray(embs))
 
-    print("See additional usage examples in test_raster_embedding")
+    print("See additional usage examples in test_embeddings")
