@@ -67,6 +67,14 @@ class TestEmbeddings(unittest.TestCase):
             visualize_embeddings(T, embeddings, seed=prng, one_to_iterable=o)
             # plt.show()  # Temporary
 
+        S = nx.Graph()
+        S.add_nodes_from({i for i in T.nodes})
+        emb ={i: n for i,n in enumerate(T.nodes)}
+        visualize_embeddings(T, embeddings=[emb], S=S) # Should plot every nodes but no edges 
+        # plt.show()
+        visualize_embeddings(T, embeddings=[emb], S=None) # Should plot every nodes and edges
+        # plt.show()
+
     def test_shuffle_graph(self):
         prng = np.random.default_rng()
         T = dnx.zephyr_graph(1)
