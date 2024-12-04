@@ -58,10 +58,6 @@ def visualize_embeddings(
         **kwargs: Additional keyword arguments passed to the drawing functions
             (e.g., `node_size`, `font_size`, `width`).
 
-    Raises:
-        ValueError: If `G` or `embeddings` is invalid.
-        RuntimeError: If a suitable layout function for `G` cannot be determined.
-
     Draws:
         - Specialized layouts: Uses dwave_networkx's `draw_chimera`,
           `draw_pegasus`, or `draw_zephyr` functions if the graph family is identified.
@@ -239,12 +235,6 @@ def find_multiple_embeddings(
             interpreted. Set to `True` to allow multiple target nodes to map to
             a single source node. Defaults to `False` for one-to-one embeddings.
 
-    Raises:
-        ValueError: If `max_num_emb` is less than 1.
-        ValueError: If the source or target graph is invalid or not compatible
-            with the chosen embedder.
-        RuntimeError: If no embeddings are found within the specified timeout.
-
     Returns:
         list: A list of disjoint embeddings. Each embedding follows the format
             dictated by the embedder. By default, each embedding defines a 1:1
@@ -309,9 +299,6 @@ def embedding_feasibility_filter(
         T: The target graph in which to embed.
         one_to_one: If True, only 1-to-1 (subgraph) embeddings are allowed.
             Defaults to False, permitting minor embeddings.
-
-    Raises:
-        ValueError: If either `S` or `T` is not a valid networkx graph.
 
     Returns:
         bool: `False` if subgraph embedding is definitely infeasible, `True`
@@ -546,7 +533,6 @@ def find_sublattice_embeddings(
         ValueError: If the source graph `S` is too large for the specified tile
             or graph rows, or if the target graph `T` is not of type zephyr,
             pegasus, or chimera.
-        RuntimeError: If no embeddings are found within the specified timeout.
 
     Returns:
         list: A list of disjoint embeddings.
