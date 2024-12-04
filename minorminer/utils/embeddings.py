@@ -728,10 +728,7 @@ if __name__ == "__main__":
         assert len(set(value_list)) == len(value_list)
 
         # plt.figure(figsize=(12, 12))
-        # S = nx.Graph()
-        # S.add_nodes_from({i for i in T.nodes})
-        # emb ={i: n for i,n in enumerate(T.nodes)}
-        # visualize_embeddings(T, embeddings=[emb], S=S)
+        # visualize_embeddings(T, embeddings=embs)
         # plt.show()
         embs = find_sublattice_embeddings(S, T)
         print(f"{len(embs)} Independent embeddings by direct search")
