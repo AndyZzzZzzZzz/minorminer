@@ -44,7 +44,7 @@ def visualize_embeddings(
         embeddings: A list of embeddings where each
             embedding is a dictionary mapping nodes of the source graph to
             nodes in the target graph.
-        S: The input source graph to be visualized. If provided, only edges 
+        S: The input source graph to be visualized. If provided, only edges in embeddings
             that corresponds to the source graph would be visualized.
         seed: A seed for pseudo-random number generator. When provided, 
             is used to randomize the colormap assignment.
@@ -92,11 +92,28 @@ def visualize_embeddings(
 
     # Create edge color mapping
     edge_color_dict = {}
-    for v1, v2 in G.edges():
-        if node_color_dict[v1] == node_color_dict[v2]:
-            edge_color_dict[(v1, v2)] = node_color_dict[v1]
-        else:
-            edge_color_dict[(v1, v2)] = float("nan")
+    highlight_edges = []
+    if S is not None:
+        for idx, emb in enumerate(_embeddings):
+            for u, v in S.edges():
+                if u in emb and v in emb:
+                    if one_to_iterable:
+                        targets_u = emb[u]
+                        targets_v = emb[v]
+                    else:
+                        targets_u = [emb[u]]
+                        targets_v = [emb[v]]
+                    for tu in targets_u:
+                        for tv in targets_v:
+                            if G.has_edge(tu, tv):
+                                edge_color_dict[(tu, tv)] = idx
+                                highlight_edges.append((tu, tv))
+    else:
+        for v1, v2 in G.edges():
+            if node_color_dict[v1] == node_color_dict[v2]:
+                edge_color_dict[(v1, v2)] = node_color_dict[v1]
+            else:
+                edge_color_dict[(v1, v2)] = float("nan")
 
     # Default drawing arguments
     draw_kwargs = {
@@ -129,7 +146,8 @@ def visualize_embeddings(
         nx.draw_networkx(**draw_kwargs)
 
     # Recolor specific edges on top of the original graph
-    highlight_edges = [e for e in G.edges() if not np.isnan(edge_color_dict[e])]
+    if S is None:
+        highlight_edges = [e for e in G.edges() if not np.isnan(edge_color_dict[e])]
     highlight_colors = [edge_color_dict[e] for e in highlight_edges]
 
     nx.draw_networkx_edges(
@@ -709,8 +727,11 @@ if __name__ == "__main__":
         value_list = [v for emb in embs for v in emb.values()]
         assert len(set(value_list)) == len(value_list)
 
-        plt.figure(figsize=(12, 12))
-        # visualize_embeddings(T, embeddings=embs)
+        # plt.figure(figsize=(12, 12))
+        # S = nx.Graph()
+        # S.add_nodes_from({i for i in T.nodes})
+        # emb ={i: n for i,n in enumerate(T.nodes)}
+        # visualize_embeddings(T, embeddings=[emb], S=S)
         # plt.show()
         embs = find_sublattice_embeddings(S, T)
         print(f"{len(embs)} Independent embeddings by direct search")
@@ -722,4 +743,4 @@ if __name__ == "__main__":
         print("Defaults (full graph search): Presented as an ndarray")
         print(embeddings_to_ndarray(embs))
 
-    print("See additional usage examples in test_embeddings")
+    # print("See additional usage examples in test_embeddings")
