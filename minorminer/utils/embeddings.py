@@ -37,28 +37,35 @@ def visualize_embeddings(
 ) -> None:
     """Visualizes the embeddings using dwave_networkx's layout functions.
 
+    This function visualizes embeddings of a source graph onto a target graph
+    using specialized layouts for structured graphs (chimera, pegasus, or zephyr)
+    or general layouts for unstructured graphs. Node and edge colors are used
+    to differentiate embeddings.
+
     Args:
-        G: The input target graph to be visualized. If the graph
+        G: The target graph to be visualized. If the graph
             represents a specialized topology, it must be constructed using
             dwave_networkx (e.g., chimera, pegasus, or zephyr graphs).
-        embeddings: A list of embeddings where each
-            embedding is a dictionary mapping nodes of the source graph to
-            nodes in the target graph.
-        S: The input source graph to be visualized. If provided, only edges in embeddings
-            that corresponds to the source graph would be visualized.
-        seed: A seed for pseudo-random number generator. When provided, 
-            is used to randomize the colormap assignment.
-        one_to_iterable: Determines how embedding mappings are interpreted.
-            Set to True to allow multiple target nodes to be associated with a
-            single source node. Use this option when embeddings map to multiple
-            nodes per source. Defaults to `False` for one-to-one embeddings
-            where each source node maps to exactly one target node.
+        embeddings: A list of embeddings where each embedding is a dictionary
+            mapping nodes of the source graph to nodes in the target graph.
+        S: The source graph to visualize (optional). If provided, only edges
+            corresponding to the source graph embeddings are visualized.
+        seed: A seed for the pseudo-random number generator. When provided,
+            it randomizes the colormap assignment for embeddings.
+        one_to_iterable: Specifies how embeddings are interpreted. Set to `True`
+            to allow multiple target nodes to map to a single source node.
+            Defaults to `False` for one-to-one embeddings.
         **kwargs: Additional keyword arguments passed to the drawing functions
-            (e.g., node size, font size).
+            (e.g., `node_size`, `font_size`, `width`).
+
+    Raises:
+        ValueError: If `G` or `embeddings` is invalid.
+        RuntimeError: If a suitable layout function for `G` cannot be determined.
+
     Draws:
-        - Specialized layouts: Uses dwave_networkx's draw_chimera,
-          draw_pegasus, or draw_zephyr if the graph family is identified.
-        - General layouts: Falls back to networkx's draw_networkx for
+        - Specialized layouts: Uses dwave_networkx's `draw_chimera`,
+          `draw_pegasus`, or `draw_zephyr` functions if the graph family is identified.
+        - General layouts: Falls back to networkx's `draw_networkx` for
           graphs with unknown topology.
     """
     fig = plt.gcf()
@@ -206,39 +213,43 @@ def find_multiple_embeddings(
 
     Uses a greedy strategy to deterministically find multiple disjoint
     1:1 embeddings of a source graph within a target graph. Randomizing the
-    node order in S and/or T can be used for a non-deterministic pattern.
+    node order in `S` and/or `T` can enable non-deterministic behavior.
 
     Args:
         S: The source graph to embed.
         T: The target graph in which to embed.
         timeout (int, optional): Timeout per subgraph search in seconds.
-            Defaults to 10. Note that timeout=0 implies unbounded time for the
-            default ::code::`embedder=find_subgraph method`
+            Defaults to 10. Note that `timeout=0` implies unbounded time for the
+            default embedder.
         max_num_emb (int, optional): Maximum number of embeddings to find.
-            Defaults to inf (unbounded).
+            Defaults to infinity (unbounded).
         skip_filter (bool, optional): Specifies whether to skip the subgraph
             lower bound filter. Defaults to `True`, meaning the filter is skipped.
-            The filter is specific to subgraph embedders, and skip_filter should
-            always be `True` when embedder is not a subgraph search method.
-        seed (np.random.Generator, optional): When provided, is used to shuffle
-            the order of nodes and edges in the source and target graph. This
-            can allow sampling from otherwise deterministic routines.
+            The filter is specific to subgraph embedders and should always be
+            `True` when the embedder is not a subgraph search method.
+        seed (Union[int, np.random.RandomState, np.random.Generator], optional):
+            A random seed used to shuffle the order of nodes and edges in the
+            source and target graphs. Allows non-deterministic sampling.
         embedder (Callable, optional): Specifies the embedding search method,
-            a callable taking S, T as first two arguments and timeout as a
-            parameter. Defaults to minorminer.subgraph.find_subgraph.
-        embedder_kwargs (dict, optional): Specifies arguments for embedder
-            other than S, T and timeout.
+            a callable taking `S`, `T`, and `timeout` as parameters. Defaults to
+            `minorminer.subgraph.find_subgraph`.
+        embedder_kwargs (dict, optional): Additional arguments for the embedder
+            beyond `S`, `T`, and `timeout`.
         one_to_iterable (bool, optional): Determines how embedding mappings are
-            interpreted. Set to True to allow multiple target nodes to be
-            associated with a single source node. Use this option when
-            embeddings map to multiple nodes per source. Defaults to `False`
-            for one-to-one embeddings where each source node maps to exactly
-            one target node.
+            interpreted. Set to `True` to allow multiple target nodes to map to
+            a single source node. Defaults to `False` for one-to-one embeddings.
+
+    Raises:
+        ValueError: If `max_num_emb` is less than 1.
+        ValueError: If the source or target graph is invalid or not compatible
+            with the chosen embedder.
+        RuntimeError: If no embeddings are found within the specified timeout.
+
     Returns:
         list: A list of disjoint embeddings. Each embedding follows the format
-            dictated by embedder. By default each embedding defines a 1:1 map
-            from the source to the target in the form of a dictionary with no
-            reusue of target variables.
+            dictated by the embedder. By default, each embedding defines a 1:1
+            map from the source to the target graph as a dictionary without
+            reusing target variables.
     """
     embs = []
     if embedder is None:
@@ -284,21 +295,27 @@ def embedding_feasibility_filter(
 ) -> bool:
     """Feasibility filter for embedding.
 
-    If S cannot subgraph embed on T based on the degree distribution of
-    the source and target graphs returns False. Otherwise returns True.
-    False positives are permissable, deciding the graph isomorphisms problem
-    is NP-complete and this is an efficient filter.
-    The degree distribution test is one of many possible heuristics, exploiting
-    additional graph structure strictly stronger filters are possible
+    Determines if the source graph `S` can be subgraph-embedded onto the target
+    graph `T` based on their degree distributions. Returns `False` if embedding
+    is definitely infeasible; otherwise, returns `True`. False positives are
+    permissible because deciding the graph isomorphism problem is NP-complete,
+    and this filter is designed to be efficient.
+
+    The degree distribution test is a heuristic; stronger filters are possible
+    by exploiting additional graph structure.
 
     Args:
         S: The source graph to embed.
         T: The target graph in which to embed.
-        one_to_one: Permit only 1 to 1 embeddings (subgraph embeddings),
-            are permitted.
+        one_to_one: If True, only 1-to-1 (subgraph) embeddings are allowed.
+            Defaults to False, permitting minor embeddings.
+
+    Raises:
+        ValueError: If either `S` or `T` is not a valid networkx graph.
+
     Returns:
-        bool: False is subgraph embedding is definitely infeasible, True
-           otherwise.
+        bool: `False` if subgraph embedding is definitely infeasible, `True`
+            otherwise.
     """
     # Comment, similar bounds are possible allowing for minor embeddings.
     # This could be a possible feature expansion.
@@ -375,28 +392,32 @@ def graph_rows_lower_bound(
 ) -> float:
     """Returns a lower bound on the graph size required for embedding.
 
-    Using efficiently established graph properties such as number of nodes,
-    number of edges, node-degree distribution, and two-colorability establish
-    a lower bound on the required scale (m) of dwave_networkx graphs.
-    There may be no scale at which embedding is feasible, in which case None is
-    returned.
-    Either T or topology must be specified.
+    Using efficiently established graph properties such as the number of nodes,
+    number of edges, node-degree distribution, and two-colorability, this
+    function establishes a lower bound on the required scale (`graph_rows`) of
+    dwave_networkx graphs. There may be no scale at which embedding is feasible,
+    in which case None is returned. Either `T` or `topology` must be specified.
 
     Args:
         S: The source graph to embed.
-        T: The target graph in which to embed. The
-            graph must be of type zephyr, pegasus or chimera and constructed by
-            dwave_networkx.
-        topology: The topology 'chimera', 'pegasus' or
-            'zephyr'. This is inferred from T by default. Any set value must
-            be consistent with T (if T is not None).
-        t: the tile parameter, relevant for zephyr and chimera
-            cases. Inferred from T by default. Any set value must be consistent
-            with T (if T is not None).
+        T: The target graph in which to embed. The graph must be of type
+            'zephyr', 'pegasus', or 'chimera' and constructed by dwave_networkx.
+        topology: The topology ('chimera', 'pegasus', or 'zephyr'). This is
+            inferred from `T` by default. Any set value must be consistent with
+            `T` (if `T` is not None).
+        t: The tile parameter, relevant for 'zephyr' and 'chimera' topologies.
+            Inferred from `T` by default. Any set value must be consistent with
+            `T` (if `T` is not None).
         one_to_one: True if a subgraph embedding is assumed, False for general
             embeddings.
-    Returns
-        float: minimum graph_rows for embedding to be feasible. Returns
+
+    Raises:
+        ValueError: If `T` and `topology` are inconsistent, or if `T` and `t` are inconsistent.
+        ValueError: If neither `T` nor `topology` is specified.
+        ValueError: If `S` cannot be embedded in `T` or the specified topology.
+
+    Returns:
+        float: Minimum `graph_rows` for embedding to be feasible. Returns
             None if embedding for any number of graph rows is infeasible.
     """
     # Comment, similar bounds are possible allowing for minor embeddings,
@@ -489,43 +510,44 @@ def find_sublattice_embeddings(
     Args:
         S: The source graph to embed.
         T: The target graph in which to embed. If
-            raster_embedding is not None the graph must be of type zephyr,
-            pegasus or chimera and constructed by dwave_networkx.
+            raster_embedding is not None, the graph must be of type zephyr,
+            pegasus, or chimera and constructed by dwave_networkx.
         graph_rows: The number of (cell) rows (m) defining the square
-           sublattice of T. If not specified
+           sublattice of T. If not specified,
            the full graph is searched. Using a smaller breadth can enable
-           much faster search but might also prevent any embeddings being
-           found, :code:`graph_rows_lower_bound()`
-           provides a lower bound based on a fast feasibility filter.
+           much faster searches but might also prevent any embeddings from
+           being found. :code:`graph_rows_lower_bound()` provides a lower
+           bound based on a fast feasibility filter.
         timeout: Timeout per subgraph search in seconds.
-            Defaults to 10. Note that timeout=0 implies unbounded time for the
-            default ::code::`embedder=find_subgraph method`
+            Defaults to 10. Note that `timeout=0` implies unbounded time for the
+            default embedder.
         max_num_emb: Maximum number of embeddings to find.
             Defaults to inf (unbounded).
         tile: A subgraph representing a fundamental
-            unit (tile) of the target graph `T` used for embedding. If none
+            unit (tile) of the target graph `T` used for embedding. If not
             provided, the tile is automatically generated based on the
             `graph_rows` and the family of `T` (chimera, pegasus, or
-            zephyr).
-            If tile==S, the embedder is bypassed since it is sufficient
-            to check for lost edges. The source graph should be consistent with
-            the target graph parameterized by m (graph rows), this allows a
-            fast replication of the source graph embedding across a larger
-            graph.
+            zephyr). If `tile==S`, the embedder is bypassed since it is sufficient
+            to check for lost edges.
         skip_filter: Specifies whether to skip the subgraph
             lower bound filter. Defaults to True, meaning the filter is skipped.
-        seed: If provided the ordering of
-            mappings, nodes and edges of source and target graphs are all
-            shuffled. This can allow sampling from otherwise deterministic
-            routines.
+        seed: If provided, shuffles the ordering of
+            mappings, nodes, and edges of source and target graphs. This can
+            allow sampling from otherwise deterministic routines.
         embedder: Specifies the embedding search method,
-            a callable taking S, T as first two arguments and timeout as a
+            a callable taking S, T as the first two arguments and timeout as a
             parameter. Defaults to minorminer.subgraph.find_subgraph.
-        embedder_kwargs: Dictionary specifying arguments for embedder
-            other than S, T and timeout.
-        one_to_iterable: If the embedder returns a dict with iterables
-            values set to True, otherwise where the values of nodes of the
-            target graph set to False. False by default to match find_subgraph.
+        embedder_kwargs: Dictionary specifying arguments for the embedder
+            other than S, T, and timeout.
+        one_to_iterable: Specifies whether the embedder returns a dict with
+            iterable values. Defaults to False to match find_subgraph.
+
+    Raises:
+        ValueError: If the source graph `S` is too large for the specified tile
+            or graph rows, or if the target graph `T` is not of type zephyr,
+            pegasus, or chimera.
+        RuntimeError: If no embeddings are found within the specified timeout.
+
     Returns:
         list: A list of disjoint embeddings.
     """
@@ -648,6 +670,10 @@ def embeddings_to_ndarray(embs: list, node_order=None):
         node_order: An iterable giving the ordering of
             variables in each row. When not provided variables are ordered to
             match the first embedding :code:`embs[0].keys()`
+
+    Raises:
+        ValueError: If `embs` is empty and `node_order` cannot be inferred.
+
     Returns:
         np.ndarray: An embedding matrix; each row defines an embedding ordered
             by node_order.
