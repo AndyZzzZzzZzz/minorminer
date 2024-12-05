@@ -276,6 +276,10 @@ class TestEmbeddings(unittest.TestCase):
         self.assertEqual(
             L - 1, graph_rows_lower_bound(S=T, topology="zephyr", one_to_one=True)
         )
+        # Test raise error when T and topology are inconsistent
+        with self.assertRaises(ValueError):
+            graph_rows_lower_bound(S=T, T=T, topology="chimera")
+        
         T = dnx.pegasus_graph(L)
         self.assertEqual(L, graph_rows_lower_bound(S=T, T=T, one_to_one=True))
         self.assertEqual(
@@ -286,6 +290,14 @@ class TestEmbeddings(unittest.TestCase):
         self.assertEqual(
             L, graph_rows_lower_bound(S=T, topology="chimera", t=1, one_to_one=True)
         )
+
+        # Test raise error when T and topology is both none
+        with self .assertRaises(ValueError):
+            graph_rows_lower_bound(S=T, T=None, topology=None)
+        # Test raise error when graph is not dwave networkx graph
+        S = nx.complete_graph(5)
+        with self .assertRaises(ValueError):
+            graph_rows_lower_bound(S=S, T=S, t=1)
 
         m = 6
         S = dnx.chimera_graph(m)  # Embeds onto Zephyr[m//2]
@@ -418,6 +430,6 @@ class TestEmbeddings(unittest.TestCase):
         node_order = [2, 0]
         with self.assertRaises(KeyError):
             embeddings_to_ndarray(embs, node_order=node_order)
-            
+
 if __name__ == "__main__":
     unittest.main()
