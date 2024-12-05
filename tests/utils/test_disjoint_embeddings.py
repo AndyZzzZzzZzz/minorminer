@@ -374,5 +374,13 @@ class TestEmbeddings(unittest.TestCase):
                 S, invalid_T, graph_rows=min_graph_rows, tile=tile
             )
 
+        # small_T = dnx.chimera_graph(2,2)
+        # small_S = dnx.chimera_graph(2,1)
+        # small_graph_rows = 1
+        # with self.assertRaises(ValueError):
+        #     find_sublattice_embeddings(
+        #         small_S, small_T, graph_rows=small_graph_rows
+        #     )
+
 if __name__ == "__main__":
     unittest.main()
