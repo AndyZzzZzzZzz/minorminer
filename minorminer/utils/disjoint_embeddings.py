@@ -21,7 +21,7 @@ import dwave_networkx as dnx
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
-from typing import Union 
+from typing import Union
 from collections import Counter
 
 from minorminer.subgraph import find_subgraph
@@ -30,7 +30,7 @@ from minorminer.subgraph import find_subgraph
 def visualize_embeddings(
     G: nx.Graph,
     embeddings: list,
-    S: nx.Graph = None, 
+    S: nx.Graph = None,
     seed: Union[int, np.random.RandomState, np.random.Generator] = None,
     one_to_iterable: bool = False,
     **kwargs,
@@ -76,13 +76,13 @@ def visualize_embeddings(
     # Create node color mapping
     node_color_dict = {q: float("nan") for q in G.nodes()}
 
-    _embeddings = embeddings.copy()
     if seed is not None:
-        if isinstance(seed, np.random.Generator):
-            prng = seed
-        else:
-            prng = np.random.default_rng(seed=seed)
+        _embeddings = embeddings.copy()
+        prng = np.random.default_rng(seed)
         prng.shuffle(_embeddings)
+    else:
+        _embeddings = embeddings
+
     if one_to_iterable:
         node_color_dict.update(
             {
@@ -168,7 +168,9 @@ def visualize_embeddings(
     )
 
 
-def shuffle_graph(G: nx.Graph, seed: Union[int, np.random.RandomState, np.random.Generator] = None) -> nx.Graph:
+def shuffle_graph(
+    G: nx.Graph, seed: Union[int, np.random.RandomState, np.random.Generator] = None
+) -> nx.Graph:
     """Shuffle the node and edge ordering of a networkx graph.
 
     For embedding methods that operate as a function of the node or edge
@@ -178,15 +180,12 @@ def shuffle_graph(G: nx.Graph, seed: Union[int, np.random.RandomState, np.random
 
     Args:
         G: A networkx graph
-        seed: When provided, is used to shuffle the order of nodes and edges in 
+        seed: When provided, is used to shuffle the order of nodes and edges in
         the source and target graph. This can allow sampling from otherwise deterministic routines.
     Returns:
         nx.Graph: The same graph with modified node and edge ordering.
     """
-    if isinstance(seed, np.random.Generator):
-        prng = seed
-    else:
-        prng = np.random.default_rng(seed=seed)
+    prng = np.random.default_rng(seed)
     nodes = list(G.nodes())
     prng.shuffle(nodes)
     edges = list(G.edges())
@@ -615,10 +614,7 @@ def find_sublattice_embeddings(
 
     if seed is not None:
         sublattice_iter = list(sublattice_mappings(tile, _T))
-        if isinstance(seed, np.random.Generator):
-            prng = seed
-        else:
-            prng = np.random.default_rng(seed=seed)
+        prng = np.random.default_rng(seed)
         prng.shuffle(sublattice_iter)
     else:
         sublattice_iter = sublattice_mappings(tile, _T)
@@ -691,6 +687,7 @@ if __name__ == "__main__":
     print(" min m (graph rows) examples ")
 
     # Define the Graph Topologies, Tiles, and Generators
+    visualize = True
     topologies = ["chimera", "pegasus", "zephyr"]
     smallest_tile = {"chimera": 1, "pegasus": 2, "zephyr": 1}
     generators = {
@@ -752,10 +749,15 @@ if __name__ == "__main__":
         assert all(set(emb.values()).issubset(set(T.nodes())) for emb in embs)
         value_list = [v for emb in embs for v in emb.values()]
         assert len(set(value_list)) == len(value_list)
-
-        # plt.figure(figsize=(12, 12))
-        # visualize_embeddings(T, embeddings=embs)
-        # plt.show()
+        if visualize:
+            plt.figure(figsize=(12, 12))
+            visualize_embeddings(T, embeddings=embs)
+            Saux = nx.Graph()
+            Saux.add_nodes_from(S)
+            Saux.add_edges_from(list(S.edges)[:10])  # First 10 edges only ..
+            plt.figure(figsize=(12, 12))
+            visualize_embeddings(T, embeddings=embs, S=Saux)
+            plt.show()
         embs = find_sublattice_embeddings(S, T)
         print(f"{len(embs)} Independent embeddings by direct search")
         assert all(set(emb.keys()) == set(S.nodes()) for emb in embs)

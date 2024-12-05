@@ -15,7 +15,6 @@ import unittest
 import os
 import numpy as np
 
-# import matplotlib.pyplot as plt
 import networkx as nx
 from itertools import product
 
@@ -23,7 +22,7 @@ import dwave_networkx as dnx
 from minorminer import find_embedding
 
 # Note Module will be renamed - remove comments later.
-from minorminer.utils.embeddings import (
+from minorminer.utils.disjoint_embeddings import (
     visualize_embeddings,  # embeddings.py
     shuffle_graph,  # embeddings.py
     find_multiple_embeddings,  # parallel_embeddings.py
@@ -40,11 +39,9 @@ class TestEmbeddings(unittest.TestCase):
 
     @unittest.skipUnless(_display, " No display found")
     def test_visualize_embeddings(self):
-        # plt.figure(1)  # Temporary
         embeddings = [{}]
         T = dnx.chimera_graph(2)
         visualize_embeddings(T, embeddings)
-        # plt.show()  # Temporary
         blocks_of = [1, 8]
         one_to_iterable = [True, False]
         for b, o in product(blocks_of, one_to_iterable):
@@ -59,21 +56,23 @@ class TestEmbeddings(unittest.TestCase):
                     for idx in range(T.number_of_nodes() // b)
                 ]  # Blocks of 8
 
-            # plt.figure(f'2 {b} {o}')  # Temporary
             visualize_embeddings(T, embeddings, one_to_iterable=o)
-            # plt.show()  # Temporary
             prng = np.random.default_rng()
-            # plt.figure(f'3 {b} {o}')  # Temporary
             visualize_embeddings(T, embeddings, seed=prng, one_to_iterable=o)
-            # plt.show()  # Temporary
 
         S = nx.Graph()
         S.add_nodes_from({i for i in T.nodes})
-        emb ={i: n for i,n in enumerate(T.nodes)}
-        visualize_embeddings(T, embeddings=[emb], S=S) # Should plot every nodes but no edges 
-        # plt.show()
-        visualize_embeddings(T, embeddings=[emb], S=None) # Should plot every nodes and edges
-        # plt.show()
+        emb = {n: n for n in T.nodes}
+        visualize_embeddings(
+            T, embeddings=[emb], S=S
+        )  # Should plot every nodes but no edges
+        S.add_edges_from(list(T.edges)[:2])
+        visualize_embeddings(
+            T, embeddings=[emb], S=S
+        )  # Should plot every node, and two edges
+        visualize_embeddings(
+            T, embeddings=[emb], S=None
+        )  # Should plot every nodes and edges
 
     def test_shuffle_graph(self):
         prng = np.random.default_rng()
