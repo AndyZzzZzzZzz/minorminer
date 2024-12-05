@@ -369,6 +369,11 @@ class TestEmbeddings(unittest.TestCase):
         nodes_used = {v for emb in embs for v in emb.values()}
         self.assertEqual(len(nodes_used), S.number_of_nodes() * len(embs))
 
+        invalid_T = nx.complete_graph(5)  # Complete graph is not a valid topology
+        with self.assertRaises(ValueError):
+            find_sublattice_embeddings(
+                S, invalid_T, graph_rows=min_graph_rows, tile=tile
+            )
 
 if __name__ == "__main__":
     unittest.main()
