@@ -30,6 +30,7 @@ from minorminer.utils.disjoint_embeddings import (
     embedding_feasibility_filter,  # feasibility.py
     graph_rows_upper_bound,  # feasibility.py
     graph_rows_lower_bound,  # feasibility.py
+    embeddings_to_ndarray,
 )
 
 _display = os.environ.get("DISPLAY", "") != ""
@@ -382,5 +383,41 @@ class TestEmbeddings(unittest.TestCase):
         #         small_S, small_T, graph_rows=small_graph_rows
         #     )
 
+    def test_embeddings_to_ndarray(self):
+        """Test the embeddings_to_darray function with various inputs"""
+
+        # embedding without node_order
+        embs = [{0: 0, 1: 1}, {0: 2, 1: 3}]
+        expected = np.array([[0, 1], [2, 3]])
+        result = embeddings_to_ndarray(embs)
+        np.testing.assert_array_equal(
+            result, expected, "Failed to convert embeddings without node_order."
+        )
+
+        # embedding with node order
+        node_order = [1, 0]
+        expected = np.array([[1, 0], [3, 2]])
+        result = embeddings_to_ndarray(embs, node_order=node_order)
+        np.testing.assert_array_equal(
+            result, expected, "Failed to convert embeddings with node_order."
+        )
+
+        # empty embedding wthout node order
+        with self.assertRaises(ValueError):
+            embeddings_to_ndarray([], node_order=None)
+
+        # empty embedding with node order
+        node_order = [0, 1]
+        expected = np.empty((0, 2), dtype=int)  # Shape (0, number of nodes)
+        result = embeddings_to_ndarray([], node_order=node_order)
+        np.testing.assert_array_equal(
+            result, expected, "Failed to handle empty embeddings with node_order."
+        )
+
+        # inconsistent node_order with embeddings
+        node_order = [2, 0]
+        with self.assertRaises(KeyError):
+            embeddings_to_ndarray(embs, node_order=node_order)
+            
 if __name__ == "__main__":
     unittest.main()
