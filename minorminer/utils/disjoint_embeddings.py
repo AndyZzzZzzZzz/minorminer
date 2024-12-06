@@ -357,8 +357,11 @@ def embedding_feasibility_filter(
             return True
 
 
-def graph_rows_upper_bound(T: nx.Graph = None) -> int:
-    """Determines a graph rows upper bound for subgraph embedding.
+def lattice_size_upper_bound(T: nx.Graph = None) -> int:
+    """Determines an upper bound on the lattice size.
+
+    The lattice size is the parameter ``m`` of a dwave_networkx graph, also
+    called number of rows.
 
     Args:
         T: The target graph in which to embed. The graph must be of type
@@ -369,20 +372,20 @@ def graph_rows_upper_bound(T: nx.Graph = None) -> int:
     return max(T.graph.get("rows"), T.graph.get("columns"))
 
 
-def graph_rows_lower_bound(
+def lattice_size_lower_bound(
     S: nx.Graph,
     T: nx.Graph = None,
     topology: str = None,
     t: int = None,
     one_to_one: bool = False,
 ) -> float:
-    """Returns a lower bound on the graph size required for embedding.
+    """Returns a lower bound on the size necessary for embedding.
 
-    Using efficiently established graph properties such as the number of nodes,
-    number of edges, node-degree distribution, and two-colorability, this
-    function establishes a lower bound on the required scale (`graph_rows`) of
-    dwave_networkx graphs. There may be no scale at which embedding is feasible,
-    in which case None is returned. Either `T` or `topology` must be specified.
+    The lattice size is the parameter `m` of a dwave_networkx graph, also
+    called number of rows. The function returns a lower bound (necessary but 
+    not sufficient for embedding) using efficiently established graph 
+    properties such as the number of nodes, number of edges, node-degree 
+    distribution, and two-colorability
 
     Args:
         S: The source graph to embed.
@@ -403,7 +406,7 @@ def graph_rows_lower_bound(
         ValueError: If `S` cannot be embedded in `T` or the specified topology.
 
     Returns:
-        float: Minimum `graph_rows` for embedding to be feasible. Returns
+        float: Minimum `lattice_size` for embedding to be feasible. Returns
             None if embedding for any number of graph rows is infeasible.
     """
     # Comment, similar bounds are possible allowing for minor embeddings,
@@ -440,44 +443,44 @@ def graph_rows_lower_bound(
         ):
             return None
 
-        def generator(graph_rows):
-            return dnx.chimera_graph(m=graph_rows, n=graph_rows, t=t)
+        def generator(lattice_size):
+            return dnx.chimera_graph(m=lattice_size, n=lattice_size, t=t)
 
         # A lower bound based on number of variables N = m*n*2*t
-        graph_rows = np.ceil(np.sqrt(N / 4 / t))
+        lattice_size = np.ceil(np.sqrt(N / 4 / t))
     elif topology == "pegasus":
 
-        def generator(graph_rows):
-            return dnx.pegasus_graph(m=graph_rows)
+        def generator(lattice_size):
+            return dnx.pegasus_graph(m=lattice_size)
 
         # A lower bound based on number of variables N = (m*24-8)*(m-1)
-        graph_rows = np.ceil(1 / 12 * (8 + np.sqrt(6 * N + 16)))
+        lattice_size = np.ceil(1 / 12 * (8 + np.sqrt(6 * N + 16)))
     elif topology == "zephyr":
 
-        def generator(graph_rows):
-            return dnx.zephyr_graph(m=graph_rows, t=t)
+        def generator(lattice_size):
+            return dnx.zephyr_graph(m=lattice_size, t=t)
 
         # A lower bound based on number of variables N = (2m+1)*m*4*t
-        graph_rows = np.ceil((np.sqrt(2 * N / t + 1) - 1) / 4)
+        lattice_size = np.ceil((np.sqrt(2 * N / t + 1) - 1) / 4)
     else:
         raise ValueError(
             "source graphs must be a graph constructed by "
             "dwave_networkx as chimera, pegasus or zephyr type"
         )
     # Evaluate tile feasibility (defect free subgraphs)
-    graph_rows = round(graph_rows)
-    tile = generator(graph_rows=graph_rows)
+    lattice_size = round(lattice_size)
+    tile = generator(lattice_size=lattice_size)
     while embedding_feasibility_filter(S, tile, one_to_one) is False:
-        graph_rows += 1
-        tile = generator(graph_rows=graph_rows)
-    return graph_rows
+        lattice_size += 1
+        tile = generator(lattice_size=lattice_size)
+    return lattice_size
 
 
 def find_sublattice_embeddings(
     S: nx.Graph,
     T: nx.Graph,
     *,
-    graph_rows: int = None,
+    sublattice_size: int = None,
     timeout: int = 10,
     max_num_emb: int = 1,
     tile: nx.Graph = None,
@@ -496,12 +499,12 @@ def find_sublattice_embeddings(
         T: The target graph in which to embed. If
             raster_embedding is not None, the graph must be of type zephyr,
             pegasus, or chimera and constructed by dwave_networkx.
-        graph_rows: The number of (cell) rows (m) defining the square
-           sublattice of T. If not specified,
-           the full graph is searched. Using a smaller breadth can enable
-           much faster searches but might also prevent any embeddings from
-           being found. :code:`graph_rows_lower_bound()` provides a lower
-           bound based on a fast feasibility filter.
+        sublattice_size: The parameter m of the dwave_networkx graph defining 
+           the lattice offsets searched and tile. See documentation for 
+           zephyr, pegasus or chimera graph generators and sublattice mappings. 
+           When tile is provided as an argument this parameter defines only the
+           sublattice mappings. :code:`lattice_size_lower_bound()` provides a 
+           lower bound based on a fast feasibility filter.
         timeout: Timeout per subgraph search in seconds.
             Defaults to 10. Note that `timeout=0` implies unbounded time for the
             default embedder.
@@ -510,7 +513,7 @@ def find_sublattice_embeddings(
         tile: A subgraph representing a fundamental
             unit (tile) of the target graph `T` used for embedding. If not
             provided, the tile is automatically generated based on the
-            `graph_rows` and the family of `T` (chimera, pegasus, or
+            `sublattice_size` and the family of `T` (chimera, pegasus, or
             zephyr). If `tile==S`, the embedder is bypassed since it is sufficient
             to check for lost edges.
         skip_filter: Specifies whether to skip the subgraph
@@ -528,13 +531,13 @@ def find_sublattice_embeddings(
 
     Raises:
         ValueError: If the source graph `S` is too large for the specified tile
-            or graph rows, or if the target graph `T` is not of type zephyr,
-            pegasus, or chimera.
+            or `sublattice_size`, or if the target graph `T` is not of type 
+            zephyr, pegasus, or chimera.
 
     Returns:
         list: A list of disjoint embeddings.
     """
-    if graph_rows is None:
+    if sublattice_size is None:
         return find_multiple_embeddings(
             S=S,
             T=T,
@@ -546,20 +549,20 @@ def find_sublattice_embeddings(
         )
 
     if not skip_filter:
-        feasibility_bound = graph_rows_lower_bound(
+        feasibility_bound = lattice_size_lower_bound(
             S=S, T=T, one_to_one=not one_to_iterable
         )
-        if feasibility_bound is None or graph_rows < feasibility_bound:
-            warnings.warn("graph_rows < lower bound: embeddings will be empty.")
+        if feasibility_bound is None or sublattice_size < feasibility_bound:
+            warnings.warn("sublattice_size < lower bound: embeddings will be empty.")
             return []
-    # A possible feature enhancement might allow for graph_rows (m) to be
+    # A possible feature enhancement might allow for sublattice_size (m) to be
     # replaced by shape: (m,t) [zephyr] or (m,n,t) [Chimera]
     family = T.graph.get("family")
     if family == "chimera":
         sublattice_mappings = dnx.chimera_sublattice_mappings
         t = T.graph["tile"]
         if tile is None:
-            tile = dnx.chimera_graph(m=graph_rows, n=graph_rows, t=t)
+            tile = dnx.chimera_graph(m=sublattice_size, n=sublattice_size, t=t)
         elif (
             not skip_filter
             and embedding_feasibility_filter(S, tile, one_to_one) is False
@@ -568,7 +571,7 @@ def find_sublattice_embeddings(
     elif family == "pegasus":
         sublattice_mappings = dnx.pegasus_sublattice_mappings
         if tile is None:
-            tile = dnx.pegasus_graph(m=graph_rows)
+            tile = dnx.pegasus_graph(m=sublattice_size)
         elif (
             not skip_filter
             and embedding_feasibility_filter(S, tile, one_to_one) is False
@@ -578,7 +581,7 @@ def find_sublattice_embeddings(
         sublattice_mappings = dnx.zephyr_sublattice_mappings
         t = T.graph["tile"]
         if tile is None:
-            tile = dnx.zephyr_graph(m=graph_rows, t=t)
+            tile = dnx.zephyr_graph(m=sublattice_size, t=t)
         elif (
             not skip_filter
             and embedding_feasibility_filter(S, tile, one_to_one) is False
@@ -682,36 +685,36 @@ if __name__ == "__main__":
 
     # Iterate over Topologies for Raster Embedding Checks
     for stopology in topologies:
-        graph_rows_S = smallest_tile[stopology] + 1
-        S = generators[stopology](graph_rows_S)
+        sublattice_size_S = smallest_tile[stopology] + 1
+        S = generators[stopology](sublattice_size_S)
 
         # For each target topology, checks whether embedding the graph S into
         # that topology is feasible
         for ttopology in topologies:
-            graph_rows = graph_rows_lower_bound(S, topology=ttopology, one_to_one=True)
-            if graph_rows is None:
+            sublattice_size = lattice_size_lower_bound(S, topology=ttopology, one_to_one=True)
+            if sublattice_size is None:
                 print(
-                    f"Embedding {stopology}-{graph_rows_S} in "
+                    f"Embedding {stopology}-{sublattice_size_S} in "
                     f"{ttopology} is infeasible."
                 )
             else:
                 print(
-                    f"Embedding {stopology}-{graph_rows_S} in "
-                    f"{ttopology} may be feasible, requires graph_rows "
-                    f">= {graph_rows}."
+                    f"Embedding {stopology}-{sublattice_size_S} in "
+                    f"{ttopology} may be feasible, requires sublattice_size "
+                    f">= {sublattice_size}."
                 )
             T = generators[ttopology](smallest_tile[ttopology])
-            graph_rows = graph_rows_lower_bound(S, T=T)
-            if graph_rows is None:
+            sublattice_size = lattice_size_lower_bound(S, T=T)
+            if sublattice_size is None:
                 print(
-                    f"Embedding {stopology}-{graph_rows_S} in "
+                    f"Embedding {stopology}-{sublattice_size_S} in "
                     f"{ttopology}-{smallest_tile[ttopology]} is infeasible."
                 )
             else:
                 print(
-                    f"Embedding {stopology}-{graph_rows_S} in "
+                    f"Embedding {stopology}-{sublattice_size_S} in "
                     f"{ttopology}-{smallest_tile[ttopology]} may be feasible"
-                    f", requires graph_rows >= {graph_rows}."
+                    f", requires sublattice_size >= {sublattice_size}."
                 )
     print()
     print(" raster embedding examples ")
@@ -725,7 +728,7 @@ if __name__ == "__main__":
         print(topology)
         # Perform Embedding Search and Validation
         embs = find_sublattice_embeddings(
-            S, T, graph_rows=min_raster_scale, max_num_emb=float("inf")
+            S, T, sublattice_size=min_raster_scale, max_num_emb=float("inf")
         )
         print(f"{len(embs)} Independent embeddings by rastering")
         print(embs)

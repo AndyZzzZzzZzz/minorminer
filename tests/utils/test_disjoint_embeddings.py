@@ -28,8 +28,8 @@ from minorminer.utils.disjoint_embeddings import (
     find_multiple_embeddings,  # parallel_embeddings.py
     find_sublattice_embeddings,  # parallel_embeddings.py
     embedding_feasibility_filter,  # feasibility.py
-    graph_rows_upper_bound,  # feasibility.py
-    graph_rows_lower_bound,  # feasibility.py
+    lattice_size_upper_bound,  # feasibility.py
+    lattice_size_lower_bound,  # feasibility.py
     embeddings_to_ndarray,
 )
 
@@ -260,77 +260,77 @@ class TestEmbeddings(unittest.TestCase):
         )
         # Check tetrahedron cannot be embedded on a graph with a triangle + 0,1,2 connectivity nodes.
 
-    def test_graph_rows_subgraph_upper_bound(self):
+    def test_lattice_size_subgraph_upper_bound(self):
         L = np.random.randint(2) + 2
         T = dnx.zephyr_graph(L - 1)
-        self.assertEqual(L - 1, graph_rows_upper_bound(T=T))
+        self.assertEqual(L - 1, lattice_size_upper_bound(T=T))
         T = dnx.pegasus_graph(L)
-        self.assertEqual(L, graph_rows_upper_bound(T=T))
+        self.assertEqual(L, lattice_size_upper_bound(T=T))
         T = dnx.chimera_graph(L, L - 1, 1)
-        self.assertEqual(L, graph_rows_upper_bound(T=T))
+        self.assertEqual(L, lattice_size_upper_bound(T=T))
 
-    def test_graph_rows_subgraph_lower_bound(self):
+    def test_lattice_size_lower_bound(self):
         L = np.random.randint(2) + 2
         T = dnx.zephyr_graph(L - 1)
-        self.assertEqual(L - 1, graph_rows_lower_bound(S=T, T=T, one_to_one=True))
+        self.assertEqual(L - 1, lattice_size_lower_bound(S=T, T=T, one_to_one=True))
         self.assertEqual(
-            L - 1, graph_rows_lower_bound(S=T, topology="zephyr", one_to_one=True)
+            L - 1, lattice_size_lower_bound(S=T, topology="zephyr", one_to_one=True)
         )
         # Test raise error when T and topology are inconsistent
         with self.assertRaises(ValueError):
-            graph_rows_lower_bound(S=T, T=T, topology="chimera")
+            lattice_size_lower_bound(S=T, T=T, topology="chimera")
         
         T = dnx.pegasus_graph(L)
-        self.assertEqual(L, graph_rows_lower_bound(S=T, T=T, one_to_one=True))
+        self.assertEqual(L, lattice_size_lower_bound(S=T, T=T, one_to_one=True))
         self.assertEqual(
-            L, graph_rows_lower_bound(S=T, topology="pegasus", one_to_one=True)
+            L, lattice_size_lower_bound(S=T, topology="pegasus", one_to_one=True)
         )
         T = dnx.chimera_graph(L, L - 1, 1)
-        self.assertEqual(L, graph_rows_lower_bound(S=T, T=T, one_to_one=True))
+        self.assertEqual(L, lattice_size_lower_bound(S=T, T=T, one_to_one=True))
         self.assertEqual(
-            L, graph_rows_lower_bound(S=T, topology="chimera", t=1, one_to_one=True)
+            L, lattice_size_lower_bound(S=T, topology="chimera", t=1, one_to_one=True)
         )
 
         # Test raise error when T and topology is both none
         with self .assertRaises(ValueError):
-            graph_rows_lower_bound(S=T, T=None, topology=None)
+            lattice_size_lower_bound(S=T, T=None, topology=None)
         # Test raise error when graph is not dwave networkx graph
         S = nx.complete_graph(5)
         with self .assertRaises(ValueError):
-            graph_rows_lower_bound(S=S, T=S, t=1)
+            lattice_size_lower_bound(S=S, T=S, t=1)
 
         m = 6
         S = dnx.chimera_graph(m)  # Embeds onto Zephyr[m//2]
         self.assertEqual(
-            m // 2, graph_rows_lower_bound(S=S, topology="zephyr", one_to_one=True)
+            m // 2, lattice_size_lower_bound(S=S, topology="zephyr", one_to_one=True)
         )
         T = dnx.zephyr_graph(m)
-        self.assertEqual(m // 2, graph_rows_lower_bound(S=S, T=T, one_to_one=True))
+        self.assertEqual(m // 2, lattice_size_lower_bound(S=S, T=T, one_to_one=True))
 
     def test_find_sublattice_embeddings_basic(self):
         # defaults and basic arguments
         for topology in ["chimera", "pegasus", "zephyr"]:
             if topology == "chimera":
-                min_graph_rows = 1
-                S = dnx.chimera_graph(min_graph_rows)
-                T = dnx.chimera_graph(min_graph_rows + 1)
+                min_sublattice_size = 1
+                S = dnx.chimera_graph(min_sublattice_size)
+                T = dnx.chimera_graph(min_sublattice_size + 1)
                 num_emb = 4
             elif topology == "pegasus":
-                min_graph_rows = 2
-                S = dnx.pegasus_graph(min_graph_rows)
-                T = dnx.pegasus_graph(min_graph_rows + 1)
+                min_sublattice_size = 2
+                S = dnx.pegasus_graph(min_sublattice_size)
+                T = dnx.pegasus_graph(min_sublattice_size + 1)
                 num_emb = 2
             elif topology == "zephyr":
-                min_graph_rows = 1
-                S = dnx.zephyr_graph(min_graph_rows)
-                T = dnx.zephyr_graph(min_graph_rows + 1)
+                min_sublattice_size = 1
+                S = dnx.zephyr_graph(min_sublattice_size)
+                T = dnx.zephyr_graph(min_sublattice_size + 1)
                 num_emb = 2
 
-            embs = find_sublattice_embeddings(S, T, graph_rows=min_graph_rows)
+            embs = find_sublattice_embeddings(S, T, sublattice_size=min_sublattice_size)
             self.assertEqual(len(embs), 1, "mismatched number of embeddings")
 
             embs = find_sublattice_embeddings(
-                S, T, graph_rows=min_graph_rows, max_num_emb=float("Inf")
+                S, T, sublattice_size=min_sublattice_size, max_num_emb=float("Inf")
             )
             self.assertEqual(len(embs), num_emb, "mismatched number of embeddings")
             self.assertTrue(
@@ -349,12 +349,12 @@ class TestEmbeddings(unittest.TestCase):
     def test_find_sublattice_embeddings_tile(self):
         # Check function responds correctly to tile specification
         topology = "chimera"
-        min_graph_rows = 1
+        min_sublattice_size = 1
         S = nx.from_edgelist({(i, i + 1) for i in range(5)})  # 6 nodes
-        T = dnx.chimera_graph(min_graph_rows + 1)
-        tile = dnx.chimera_graph(min_graph_rows, node_list=list(range(1, 8)))
+        T = dnx.chimera_graph(min_sublattice_size + 1)
+        tile = dnx.chimera_graph(min_sublattice_size, node_list=list(range(1, 8)))
         embs = find_sublattice_embeddings(
-            S, T, graph_rows=min_graph_rows, max_num_emb=float("Inf"), tile=tile
+            S, T, sublattice_size=min_sublattice_size, max_num_emb=float("Inf"), tile=tile
         )
         self.assertEqual(len(embs), 4)
         nodes_used = {v for emb in embs for v in emb.values()}
@@ -362,9 +362,9 @@ class TestEmbeddings(unittest.TestCase):
         self.assertTrue(
             all(n % 8 > 0 for n in nodes_used), "Every 8th node excluded by tile"
         )
-        tile5 = dnx.chimera_graph(min_graph_rows, node_list=list(range(3, 8)))
+        tile5 = dnx.chimera_graph(min_sublattice_size, node_list=list(range(3, 8)))
         embs = find_sublattice_embeddings(
-            S, T, graph_rows=min_graph_rows, max_num_emb=float("Inf"), tile=tile5
+            S, T, sublattice_size=min_sublattice_size, max_num_emb=float("Inf"), tile=tile5
         )
         self.assertEqual(len(embs), 0, "Tile is too small")
 
@@ -372,7 +372,7 @@ class TestEmbeddings(unittest.TestCase):
         embs = find_sublattice_embeddings(
             S,
             T,
-            graph_rows=min_graph_rows,
+            sublattice_size=min_sublattice_size,
             max_num_emb=float("Inf"),
             tile=tile,
             embedder=lambda x: "without S=tile trigger error",
@@ -384,16 +384,16 @@ class TestEmbeddings(unittest.TestCase):
         invalid_T = nx.complete_graph(5)  # Complete graph is not a valid topology
         with self.assertRaises(ValueError):
             find_sublattice_embeddings(
-                S, invalid_T, graph_rows=min_graph_rows, tile=tile
+                S, invalid_T, sublattice_size=min_sublattice_size, tile=tile
             )
 
-        # small_T = dnx.chimera_graph(2,2)
-        # small_S = dnx.chimera_graph(2,1)
-        # small_graph_rows = 1
-        # with self.assertRaises(ValueError):
-        #     find_sublattice_embeddings(
-        #         small_S, small_T, graph_rows=small_graph_rows
-        #     )
+        small_T = dnx.chimera_graph(2,2)
+        small_S = dnx.chimera_graph(2,1)
+        sublattice_size = 1
+        with self.assertRaises(ValueError):
+            find_sublattice_embeddings(
+                small_S, small_T, sublattice_size=sublattice_size, skip_filter=False
+            )
 
     def test_embeddings_to_ndarray(self):
         """Test the embeddings_to_darray function with various inputs"""
