@@ -362,7 +362,6 @@ class TestEmbeddings(unittest.TestCase):
 
     def test_find_sublattice_embeddings_tile(self):
         # Check function responds correctly to tile specification
-        topology = "chimera"
         min_sublattice_size = 1
         S = nx.from_edgelist({(i, i + 1) for i in range(5)})  # 6 nodes
         T = dnx.chimera_graph(min_sublattice_size + 1)
