@@ -77,7 +77,6 @@ def visualize_embeddings(
         - General layouts: Falls back to networkx's `draw_networkx` for
           graphs with unknown topology.
     """
-    fig = plt.gcf()
     ax = plt.gca()
     cmap = plt.get_cmap("turbo").copy()
     cmap.set_bad("lightgrey")
