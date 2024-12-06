@@ -105,15 +105,19 @@ class TestEmbeddings(unittest.TestCase):
                 )
 
         seed = 42
-        prng1 = np.random.default_rng(seed)
-        embs_run1 = find_multiple_embeddings(S, T, max_num_emb=4, seed=prng1)
-
+        embs_run1 = find_multiple_embeddings(
+            S, T, max_num_emb=4, seed=seed, shuffle_all_graphs=True
+        )
         prng2 = np.random.default_rng(seed)
-        embs_run2 = find_multiple_embeddings(S, T, max_num_emb=4, seed=prng2)
+        embs_run2 = find_multiple_embeddings(
+            S, T, max_num_emb=4, seed=prng2, shuffle_all_graphs=True
+        )
         self.assertEqual(embs_run1, embs_run2, "seed does not allow reproducibility")
 
-        prng3 = np.random.default_rng(seed + 1)
-        embs_run3 = find_multiple_embeddings(S, T, max_num_emb=4, seed=prng3)
+        seed = seed + 1
+        embs_run3 = find_multiple_embeddings(
+            S, T, max_num_emb=4, seed=seed, shuffle_all_graphs=True
+        )
         self.assertNotEqual(
             embs_run1,
             embs_run3,

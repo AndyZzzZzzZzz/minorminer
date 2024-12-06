@@ -11,6 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+r"""Determining embedding feasibility is NP-complete.
+Efficient methods and heuristics are collected together in this module,
+that provide necessary conditions and bounds on feasibility.
+This includes determination of a lower bound on the (square)
+lattice size required for chimera, pegasus and zephyr dwave_networkx graph
+types, and a feasibility filter for general graphs based on the degree
+distributions of target and source graphs.
+"""
 import dwave_networkx as dnx
 import networkx as nx
 import numpy as np

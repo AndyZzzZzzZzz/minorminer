@@ -184,31 +184,40 @@ def shuffle_graph(
     return _G
 
 
-def embeddings_to_ndarray(embs: list, node_order=None):
-    """Convert list of embeddings into an ndarray
-
-    Note this assumes the target graph is labeled by integers and the embedding
-    is 1 to 1(numeric) in all cases. This is the format returned by
-    minorminor.subgraph for the standard presentation of QPU graphs.
+def embeddings_to_array(embs: list, node_order=None, as_ndarray=False):
+    """Convert list of embeddings into an array of embedding values
 
     Args:
         embs: A list of embeddings, each list entry in the
             form of a dictionary with integer values.
         node_order: An iterable giving the ordering of
             variables in each row. When not provided variables are ordered to
-            match the first embedding :code:`embs[0].keys()`
+            match the first embedding :code:`embs[0].keys()`. node_order
+            can define any subset of the source graph nodes (embedding
+            keys).
+        as_ndarray: The list is cast to an ndarray, this requires that
+            the embedding is 1 to 1, that the embedding values (nodes of
+            a target graph) can be cast as numpy numeric types.
 
     Raises:
-        ValueError: If `embs` is empty and `node_order` cannot be inferred.
+        ValueError: If `embs` is empty and `node_order` not provided.
 
     Returns:
-        np.ndarray: An embedding matrix; each row defines an embedding ordered
+        An embedding matrix; each row defines an embedding ordered
             by node_order.
     """
     if node_order is None:
         if len(embs) == 0:
-            raise ValueError("shape of ndarray cannot be inferred")
+            if as_ndarray:
+                raise ValueError("shape of ndarray cannot be inferred")
+            else:
+                return []
         else:
             node_order = embs[0].keys()
-
-    return np.asarray([[ie[v] for ie in embs] for v in node_order]).T
+    if as_ndarray:
+        if len(embs) == 0:
+            return np.empty(shape=(0, len(node_order)))
+        else:
+            return np.asarray([[emb[v] for v in node_order] for emb in embs])
+    else:
+        return [[emb[v] for v in node_order] for emb in embs]

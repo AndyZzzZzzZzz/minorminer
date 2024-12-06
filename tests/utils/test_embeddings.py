@@ -23,7 +23,7 @@ import dwave_networkx as dnx
 from minorminer.utils.embeddings import (
     visualize_embeddings,
     shuffle_graph,
-    embeddings_to_ndarray,
+    embeddings_to_array,
 )
 
 _display = os.environ.get("DISPLAY", "") != ""
@@ -97,33 +97,42 @@ class TestEmbeddings(unittest.TestCase):
             list(G1.edges), list(G2.edges), "different seeds give same Graph"
         )
 
-    def test_embeddings_to_ndarray(self):
-        """Test the embeddings_to_darray function with various inputs"""
+    def test_embeddings_to_array(self):
+        """Test the embeddings_to_array function with various inputs"""
 
         # embedding without node_order
         embs = [{0: 0, 1: 1}, {0: 2, 1: 3}]
         expected = np.array([[0, 1], [2, 3]])
-        result = embeddings_to_ndarray(embs)
+        result = embeddings_to_array(embs, as_ndarray=True)
         np.testing.assert_array_equal(
             result, expected, "Failed to convert embeddings without node_order."
+        )
+        result = embeddings_to_array(embs, as_ndarray=False)
+        self.assertEqual(type(result), list)
+        np.testing.assert_array_equal(
+            np.array(result),
+            expected,
+            "Failed to convert embeddings without node_order.",
         )
 
         # embedding with node order
         node_order = [1, 0]
         expected = np.array([[1, 0], [3, 2]])
-        result = embeddings_to_ndarray(embs, node_order=node_order)
+        result = embeddings_to_array(embs, node_order=node_order, as_ndarray=True)
         np.testing.assert_array_equal(
             result, expected, "Failed to convert embeddings with node_order."
         )
 
-        # empty embedding wthout node order
+        # empty embedding wthout node order, raises error in numpy case as
+        # 2d array expected but the shape is unknown in the variables dimension.
+        embeddings_to_array([], node_order=None, as_ndarray=False)
         with self.assertRaises(ValueError):
-            embeddings_to_ndarray([], node_order=None)
+            embeddings_to_array([], node_order=None, as_ndarray=True)
 
         # empty embedding with node order
         node_order = [0, 1]
         expected = np.empty((0, 2), dtype=int)  # Shape (0, number of nodes)
-        result = embeddings_to_ndarray([], node_order=node_order)
+        result = embeddings_to_array([], node_order=node_order, as_ndarray=True)
         np.testing.assert_array_equal(
             result, expected, "Failed to handle empty embeddings with node_order."
         )
@@ -131,7 +140,7 @@ class TestEmbeddings(unittest.TestCase):
         # inconsistent node_order with embeddings
         node_order = [2, 0]
         with self.assertRaises(KeyError):
-            embeddings_to_ndarray(embs, node_order=node_order)
+            embeddings_to_array(embs, node_order=node_order)
 
 
 if __name__ == "__main__":
