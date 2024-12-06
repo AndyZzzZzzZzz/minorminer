@@ -101,20 +101,16 @@ def visualize_embeddings(
     edge_color_dict = {}
     highlight_edges = []
     if S is not None:
-        for idx, emb in enumerate(_embeddings):
-            for u, v in S.edges():
-                if u in emb and v in emb:
-                    if one_to_iterable:
-                        targets_u = emb[u]
-                        targets_v = emb[v]
-                    else:
-                        targets_u = [emb[u]]
-                        targets_v = [emb[v]]
-                    for tu in targets_u:
-                        for tv in targets_v:
-                            if G.has_edge(tu, tv):
-                                edge_color_dict[(tu, tv)] = idx
-                                highlight_edges.append((tu, tv))
+        edge_color_dict = {
+            (tu, tv): idx
+            for idx, emb in enumerate(_embeddings)
+            for u, v in S.edges()
+            if u in emb and v in emb
+            for tu in (emb[u] if one_to_iterable else [emb[u]])
+            for tv in (emb[v] if one_to_iterable else [emb[v]])
+            if G.has_edge(tu, tv)
+        }
+        highlight_edges = list(edge_color_dict.keys())
     else:
         for v1, v2 in G.edges():
             if node_color_dict[v1] == node_color_dict[v2]:
