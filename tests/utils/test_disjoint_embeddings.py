@@ -22,15 +22,20 @@ import dwave_networkx as dnx
 from minorminer import find_embedding
 
 # Note Module will be renamed - remove comments later.
-from minorminer.utils.disjoint_embeddings import (
-    visualize_embeddings,  # embeddings.py
-    shuffle_graph,  # embeddings.py
+from minorminer.utils.parallel_embeddings import (
     find_multiple_embeddings,  # parallel_embeddings.py
     find_sublattice_embeddings,  # parallel_embeddings.py
+)
+from minorminer.utils.embeddings import(
+    visualize_embeddings,  # embeddings.py
+    shuffle_graph,  # embeddings.py
+    embeddings_to_ndarray,
+)
+
+from minorminer.utils.feasibility import(
     embedding_feasibility_filter,  # feasibility.py
     lattice_size_upper_bound,  # feasibility.py
     lattice_size_lower_bound,  # feasibility.py
-    embeddings_to_ndarray,
 )
 
 _display = os.environ.get("DISPLAY", "") != ""
