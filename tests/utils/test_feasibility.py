@@ -26,7 +26,7 @@ from minorminer.utils.feasibility import (
 
 
 class TestEmbeddings(unittest.TestCase):
-    def test_subgraph_embedding_feasibility_filter(self):
+    def test_embedding_feasibility_filter(self):
         m = 7  # Odd m
         T = dnx.chimera_graph(m)
         S = dnx.chimera_graph(m - 1)
