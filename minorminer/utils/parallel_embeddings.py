@@ -21,7 +21,7 @@ import dwave_networkx as dnx
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
-from typing import Union
+from typing import Union, Tuple
 
 from minorminer.subgraph import find_subgraph
 
@@ -35,10 +35,11 @@ def visualize_embeddings(
     G: nx.Graph,
     embeddings: list,
     S: nx.Graph = None,
-    seed: Union[int, np.random.RandomState, np.random.Generator] = None,
     one_to_iterable: bool = False,
+    shuffle_colormap: bool = True,
+    seed: Union[int, np.random.RandomState, np.random.Generator] = None,
     **kwargs,
-) -> None:
+) -> Tuple[dict, dict]:
     """Visualizes the embeddings using dwave_networkx's layout functions.
 
     This function visualizes embeddings of a source graph onto a target graph
@@ -54,13 +55,21 @@ def visualize_embeddings(
             mapping nodes of the source graph to nodes in the target graph.
         S: The source graph to visualize (optional). If provided, only edges
             corresponding to the source graph embeddings are visualized.
-        seed: A seed for the pseudo-random number generator. When provided,
-            it randomizes the colormap assignment for embeddings.
         one_to_iterable: Specifies how embeddings are interpreted. Set to `True`
             to allow multiple target nodes to map to a single source node.
             Defaults to `False` for one-to-one embeddings.
+        shuffle_colormap: A sequential colormap is used. If shuffle_colormap is
+            False the sequential ordering determines a sequence of related colors
+            otherwise colors are randomized.
+        seed: A seed for the pseudo-random number generator. When provided,
+            it randomizes the colormap assignment for embeddings.
         **kwargs: Additional keyword arguments passed to the drawing functions
             (e.g., `node_size`, `font_size`, `width`).
+
+    Returns:
+        Two dictionaries the first mapping plotted nodes to the source index.
+        The second mapping plotted edges to the source index. The source embedding
+        is embeddings[index]. Background edges/nodes are mapped to nan.
 
     Draws:
         - Specialized layouts: Uses dwave_networkx's `draw_chimera`,
@@ -76,30 +85,49 @@ def visualize_embeddings(
     # Create node color mapping
     node_color_dict = {q: float("nan") for q in G.nodes()}
 
-    if seed is not None:
+    if shuffle_colormap:
         _embeddings = embeddings.copy()
         prng = np.random.default_rng(seed)
         prng.shuffle(_embeddings)
     else:
         _embeddings = embeddings
 
-    if one_to_iterable:
-        node_color_dict.update(
-            {
-                q: idx
-                for idx, emb in enumerate(_embeddings)
-                for c in emb.values()
-                for q in c
-            }
-        )
+    if S is None:
+        if one_to_iterable:
+            node_color_dict.update(
+                {
+                    q: idx
+                    for idx, emb in enumerate(_embeddings)
+                    for c in emb.values()
+                    for q in c
+                }
+            )
+        else:
+            node_color_dict.update(
+                {q: idx for idx, emb in enumerate(_embeddings) for q in emb.values()}
+            )
     else:
-        node_color_dict.update(
-            {q: idx for idx, emb in enumerate(_embeddings) for q in emb.values()}
-        )
-
+        node_set = set(S.nodes())
+        if one_to_iterable:
+            node_color_dict.update(
+                {
+                    q: idx if n in node_set else float("nan")
+                    for idx, emb in enumerate(_embeddings)
+                    for n, c in emb.items()
+                    for q in c
+                }
+            )
+        else:
+            node_color_dict.update(
+                {
+                    q: idx
+                    for idx, emb in enumerate(_embeddings)
+                    for n, q in emb.items()
+                    if n in node_set
+                }
+            )
     # Create edge color mapping
     edge_color_dict = {}
-    highlight_edges = []
     if S is not None:
         edge_color_dict = {
             (tu, tv): idx
@@ -110,13 +138,20 @@ def visualize_embeddings(
             for tv in (emb[v] if one_to_iterable else [emb[v]])
             if G.has_edge(tu, tv)
         }
-        highlight_edges = list(edge_color_dict.keys())
+        if one_to_iterable:
+            # Feature enhancement? We could consider formatting these lines
+            # differently to distinguish chain couplers from logical couplers
+            for idx, emb in enumerate(_embeddings):
+                for chain in emb.values():
+                    Gchain = G.subgraph(chain)
+                    edge_color_dict.update({e: idx for e in Gchain.edges()})
+
     else:
-        for v1, v2 in G.edges():
-            if node_color_dict[v1] == node_color_dict[v2]:
-                edge_color_dict[(v1, v2)] = node_color_dict[v1]
-            else:
-                edge_color_dict[(v1, v2)] = float("nan")
+        edge_color_dict = {
+            (v1, v2): node_color_dict[v1]
+            for v1, v2 in G.edges()
+            if node_color_dict[v1] == node_color_dict[v2]
+        }
 
     # Default drawing arguments
     draw_kwargs = {
@@ -147,21 +182,18 @@ def visualize_embeddings(
     else:
         pos = nx.spring_layout(G)
         nx.draw_networkx(**draw_kwargs)
-
-    # Recolor specific edges on top of the original graph
-    if S is None:
-        highlight_edges = [e for e in G.edges() if not np.isnan(edge_color_dict[e])]
-    highlight_colors = [edge_color_dict[e] for e in highlight_edges]
-
-    nx.draw_networkx_edges(
-        G,
-        pos=pos,
-        edgelist=highlight_edges,
-        edge_color=highlight_colors,
-        width=1,
-        edge_cmap=cmap,
-        ax=ax,
-    )
+    if len(edge_color_dict) > 0:
+        # Recolor specific edges on top of the original graph
+        nx.draw_networkx_edges(
+            G,
+            pos=pos,
+            edgelist=list(edge_color_dict.keys()),
+            edge_color=list(edge_color_dict.values()),
+            width=1,
+            edge_cmap=cmap,
+            ax=ax,
+        )
+    return node_color_dict, edge_color_dict
 
 
 def shuffle_graph(
