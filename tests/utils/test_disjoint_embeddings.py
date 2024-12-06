@@ -398,7 +398,7 @@ class TestEmbeddings(unittest.TestCase):
         small_T = dnx.chimera_graph(2, 2)
         small_S = dnx.chimera_graph(2, 1)
         sublattice_size = 1
-        with self.assertRaises(ValueError):
+        with self.assertWarns(Warning):
             find_sublattice_embeddings(
                 small_S, small_T, sublattice_size=sublattice_size, skip_filter=False
             )

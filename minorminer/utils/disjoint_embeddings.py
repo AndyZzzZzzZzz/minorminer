@@ -303,8 +303,8 @@ def embedding_feasibility_filter(
         bool: `False` if subgraph embedding is definitely infeasible, `True`
             otherwise.
     """
-    # Comment, similar bounds are possible allowing for minor embeddings.
-    # This could be a possible feature expansion.
+    if T == S:
+        return True
     if (
         T.number_of_nodes() < S.number_of_nodes()
         or T.number_of_edges() < S.number_of_edges()
@@ -548,7 +548,7 @@ def find_sublattice_embeddings(
             embedder_kwargs=embedder_kwargs,
         )
 
-    if not skip_filter:
+    if not skip_filter and tile is None:
         feasibility_bound = lattice_size_lower_bound(
             S=S, T=T, one_to_one=not one_to_iterable
         )
@@ -565,18 +565,20 @@ def find_sublattice_embeddings(
             tile = dnx.chimera_graph(m=sublattice_size, n=sublattice_size, t=t)
         elif (
             not skip_filter
-            and embedding_feasibility_filter(S, tile, one_to_one) is False
+            and embedding_feasibility_filter(S, tile, not one_to_iterable) is False
         ):
-            raise ValueError("S is too large for given tile")
+            warnings.warn("tile is infeasible: embeddings will be empty.")
+            return []
     elif family == "pegasus":
         sublattice_mappings = dnx.pegasus_sublattice_mappings
         if tile is None:
             tile = dnx.pegasus_graph(m=sublattice_size)
         elif (
             not skip_filter
-            and embedding_feasibility_filter(S, tile, one_to_one) is False
+            and embedding_feasibility_filter(S, tile, not one_to_iterable) is False
         ):
-            raise ValueError("S is too large for given tile")
+            warnings.warn("tile is infeasible: embeddings will be empty.")
+            return []
     elif family == "zephyr":
         sublattice_mappings = dnx.zephyr_sublattice_mappings
         t = T.graph["tile"]
@@ -584,14 +586,16 @@ def find_sublattice_embeddings(
             tile = dnx.zephyr_graph(m=sublattice_size, t=t)
         elif (
             not skip_filter
-            and embedding_feasibility_filter(S, tile, one_to_one) is False
+            and embedding_feasibility_filter(S, tile, not one_to_iterable) is False
         ):
-            raise ValueError("S is too large for given tile")
+            warnings.warn("tile is infeasible: embeddings will be empty.")
+            return []
     else:
         raise ValueError(
             "source graphs must a graph constructed by "
             "dwave_networkx as chimera, pegasus or zephyr type"
         )
+
     tiling = tile == S
     embs = []
     if max_num_emb == 1 and seed is None:
