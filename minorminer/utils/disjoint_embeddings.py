@@ -419,8 +419,6 @@ def graph_rows_lower_bound(
             raise ValueError("Arguments T and topology are inconsistent")
         if t is None:
             t = T.graph["tile"]
-        elif topology != T.graph.get("family"):
-            raise ValueError("Arguments T and t are inconsistent")
     else:
         if topology is None:
             raise ValueError("T or topology must be specified")
