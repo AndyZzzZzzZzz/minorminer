@@ -39,9 +39,8 @@ def find_multiple_embeddings(
     S: nx.Graph,
     T: nx.Graph,
     *,
-    timeout: int = 10,
     max_num_emb: int = 1,
-    skip_filter: bool = True,
+    use_filter: bool = False,
     seed: Union[int, np.random.RandomState, np.random.Generator] = None,
     embedder: callable = None,
     embedder_kwargs: dict = None,
@@ -50,29 +49,30 @@ def find_multiple_embeddings(
     """Finds multiple disjoint embeddings of a source graph onto a target graph
 
     Uses a greedy strategy to deterministically find multiple disjoint
-    1:1 embeddings of a source graph within a target graph. Randomizing the
-    node order in `S` and/or `T` can enable non-deterministic behavior.
+    embeddings of a source graph onto a target graph; nodes used are removed
+    after each successful embedding.
+
+    Embedding multiple times on a large graph can take significant time.
+    It is recommended the user adjust embedder_kwargs appropriately such
+    as timeout, and also consider bounding the number of embeddings
+    returned (with max_num_emb).
 
     Args:
         S: The source graph to embed.
         T: The target graph in which to embed.
-        timeout (int, optional): Timeout per subgraph search in seconds.
-            Defaults to 10. Note that `timeout=0` implies unbounded time for the
-            default embedder.
-        max_num_emb (int, optional): Maximum number of embeddings to find.
-            Defaults to infinity (unbounded).
-        skip_filter (bool, optional): Specifies whether to skip the subgraph
-            lower bound filter. Defaults to `True`, meaning the filter is skipped.
-            The filter is specific to subgraph embedders and should always be
-            `True` when the embedder is not a subgraph search method.
+        max_num_emb: Maximum number of embeddings to find.
+            Defaults to 1, set to float('Inf') to find the maximum possible
+            number.
+        use_filter (bool, optional): Specifies whether to check feasibility
+            of embedding arguments independently of the embedder method.
         seed (Union[int, np.random.RandomState, np.random.Generator], optional):
             A random seed used to shuffle the order of nodes and edges in the
             source and target graphs. Allows non-deterministic sampling.
         embedder (Callable, optional): Specifies the embedding search method,
-            a callable taking `S`, `T`, and `timeout` as parameters. Defaults to
+            a callable taking `S`, `T`, as the first two parameters. Defaults to
             `minorminer.subgraph.find_subgraph`.
         embedder_kwargs (dict, optional): Additional arguments for the embedder
-            beyond `S`, `T`, and `timeout`.
+            beyond `S` and `T`.
         one_to_iterable (bool, optional): Determines how embedding mappings are
             interpreted. Set to `True` to allow multiple target nodes to map to
             a single source node. Defaults to `False` for one-to-one embeddings.
@@ -86,8 +86,7 @@ def find_multiple_embeddings(
     embs = []
     if embedder is None:
         embedder = find_subgraph
-        embedder_kwargs = {"triggered_restarts": True}
-    elif embedder_kwargs is None:
+    if embedder_kwargs is None:
         embedder_kwargs = {}
 
     if max_num_emb == 1 and seed is not None:
@@ -107,10 +106,14 @@ def find_multiple_embeddings(
         # A potential feature enhancement would be to allow different embedding
         # heuristics here, including those that are not 1:1
 
-        if skip_filter or embedding_feasibility_filter(_S, _T, not one_to_iterable):
-            emb = embedder(_S, _T, timeout=timeout, **embedder_kwargs)
-        else:
+        if (
+            use_filter
+            and embedding_feasibility_filter(_S, _T, not one_to_iterable) is False
+        ):
             emb = []
+        else:
+            emb = embedder(_S, _T, **embedder_kwargs)
+
         if len(emb) == 0:
             break
         elif max_num_emb > 1:
@@ -126,11 +129,10 @@ def find_sublattice_embeddings(
     S: nx.Graph,
     T: nx.Graph,
     *,
-    sublattice_size: int = None,
-    timeout: int = 10,
-    max_num_emb: int = 1,
     tile: nx.Graph = None,
-    skip_filter: bool = True,
+    sublattice_size: int = None,
+    max_num_emb: int = 1,
+    use_filter: bool = False,
     seed: Union[int, np.random.RandomState, np.random.Generator] = None,
     embedder: callable = None,
     embedder_kwargs: dict = None,
@@ -138,63 +140,70 @@ def find_sublattice_embeddings(
 ) -> list:
     """Searches for embeddings on sublattices of the target graph.
 
-    See https://doi.org/10.3389/fcomp.2023.1238988 for examples of usage.
+        Selects a sublattice (subgrid) of the graph T using dwave_networkx
+        sublattice tiles and mappings approprate to the target topology, and
+        attemps to embed. When successful the nodes are removed and the
+        process is repeated until all sublattices are explored or sufficient
+        embeddings are yielded.
 
-    Args:
-        S: The source graph to embed.
-        T: The target graph in which to embed. If
-            raster_embedding is not None, the graph must be of type zephyr,
-            pegasus, or chimera and constructed by dwave_networkx.
-        sublattice_size: The parameter m of the dwave_networkx graph defining
-           the lattice offsets searched and tile. See documentation for
-           zephyr, pegasus or chimera graph generators and sublattice mappings.
-           When tile is provided as an argument this parameter defines only the
-           sublattice mappings. :code:`lattice_size_lower_bound()` provides a
-           lower bound based on a fast feasibility filter.
-        timeout: Timeout per subgraph search in seconds.
-            Defaults to 10. Note that `timeout=0` implies unbounded time for the
-            default embedder.
-        max_num_emb: Maximum number of embeddings to find.
-            Defaults to inf (unbounded).
-        tile: A subgraph representing a fundamental
-            unit (tile) of the target graph `T` used for embedding. If not
-            provided, the tile is automatically generated based on the
-            `sublattice_size` and the family of `T` (chimera, pegasus, or
-            zephyr). If `tile==S`, the embedder is bypassed since it is sufficient
-            to check for lost edges.
-        skip_filter: Specifies whether to skip the subgraph
-            lower bound filter. Defaults to True, meaning the filter is skipped.
-        seed: If provided, shuffles the ordering of
-            mappings, nodes, and edges of source and target graphs. This can
-            allow sampling from otherwise deterministic routines.
-        embedder: Specifies the embedding search method,
-            a callable taking S, T as the first two arguments and timeout as a
-            parameter. Defaults to minorminer.subgraph.find_subgraph.
-        embedder_kwargs: Dictionary specifying arguments for the embedder
-            other than S, T, and timeout.
-        one_to_iterable: Specifies whether the embedder returns a dict with
-            iterable values. Defaults to False to match find_subgraph.
+        Embedding multiple times on a large graph can take significant time.
+        It is recommended the user adjust `embedder_kwargs` appropriately such
+        as timeout, and also consider bounding the number of embeddings
+        returned (with `max_num_emb`).
 
-    Raises:
-        ValueError: If the source graph `S` is too large for the specified tile
-            or `sublattice_size`, or if the target graph `T` is not of type
-            zephyr, pegasus, or chimera.
+        See https://doi.org/10.3389/fcomp.2023.1238988 for examples of usage.
 
-    Returns:
-        list: A list of disjoint embeddings.
+        Args:
+            S: The source graph to embed.
+            T: The target graph in which to embed. If
+                raster_embedding is not None, the graph must be of type zephyr,
+                pegasus, or chimera and constructed by dwave_networkx.
+            tile: A mask applied to the target graph `T` defining a restricted
+                space in which to search for embeddings; the tile family
+                should match that of `T`. If the tile is not
+                provided, it is generated as a fully yielded square sublattice
+                of `T`, with `m=sublattice_size`.
+                If `tile==S`, `embedder` can be ignored since a 1:1 mapping is
+                necessary on each subgraph and easily verified by checking the
+                mask is complete.
+            sublattice_size: Parameterizes the tile when it is not provided
+               as an input argument: defines the number of rows and columns
+               of a square sublattice (parameter m of the dwave_networkx graph
+               family matching T).
+               :code:`lattice_size_lower_bound()`
+               provides a lower bound based on a fast feasibility filter.
+            max_num_emb: Maximum number of embeddings to find.
+                Defaults to inf (unbounded).
+            use_filter: Specifies whether to check feasibility of arguments for
+                embedding independently of the embedder routine. Defaults to False.
+            seed: If provided, shuffles the ordering of
+                mappings, nodes, and edges of source and target graphs. This can
+                allow sampling from otherwise deterministic routines.
+    +        embedder: Specifies the embedding search method, a callable taking S, T as
+    +            the first two arguments. Defaults to minorminer.subgraph.find_subgraph.
+    +        embedder_kwargs: Dictionary specifying arguments for the `embedder`
+    +            other than `S`, `T`.
+            one_to_iterable: Specifies whether the embedder returns a dict with
+                iterable values. Defaults to False to match find_subgraph.
+
+        Raises:
+            ValueError: If the target graph `T` is not of type zephyr, pegasus, or 
+                chimera.
+
+        Returns:
+            list: A list of disjoint embeddings.
     """
-    if sublattice_size is None:
+    if sublattice_size is None and tile is None:
         return find_multiple_embeddings(
             S=S,
             T=T,
-            timeout=timeout,
             max_num_emb=max_num_emb,
             seed=seed,
             embedder=embedder,
             embedder_kwargs=embedder_kwargs,
         )
 
-    if not skip_filter and tile is None:
+    if use_filter and tile is None:
         feasibility_bound = lattice_size_lower_bound(
             S=S, T=T, one_to_one=not one_to_iterable
         )
@@ -210,7 +219,7 @@ def find_sublattice_embeddings(
         if tile is None:
             tile = dnx.chimera_graph(m=sublattice_size, n=sublattice_size, t=t)
         elif (
-            not skip_filter
+            use_filter
             and embedding_feasibility_filter(S, tile, not one_to_iterable) is False
         ):
             warnings.warn("tile is infeasible: embeddings will be empty.")
@@ -220,7 +229,7 @@ def find_sublattice_embeddings(
         if tile is None:
             tile = dnx.pegasus_graph(m=sublattice_size)
         elif (
-            not skip_filter
+            use_filter
             and embedding_feasibility_filter(S, tile, not one_to_iterable) is False
         ):
             warnings.warn("tile is infeasible: embeddings will be empty.")
@@ -231,7 +240,7 @@ def find_sublattice_embeddings(
         if tile is None:
             tile = dnx.zephyr_graph(m=sublattice_size, t=t)
         elif (
-            not skip_filter
+            use_filter
             and embedding_feasibility_filter(S, tile, not one_to_iterable) is False
         ):
             warnings.warn("tile is infeasible: embeddings will be empty.")
@@ -268,8 +277,7 @@ def find_sublattice_embeddings(
                 S,
                 Tr,
                 max_num_emb=max_num_emb,
-                timeout=timeout,
-                skip_filter=skip_filter,
+                use_filter=use_filter,
                 seed=seed,
                 embedder=embedder,
                 embedder_kwargs=embedder_kwargs,

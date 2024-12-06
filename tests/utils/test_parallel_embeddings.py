@@ -68,12 +68,12 @@ class TestEmbeddings(unittest.TestCase):
         self.assertEqual(len(set(value_list)), len(value_list), "embeddings overlap")
 
     def test_find_multiple_embeddings_advanced(self):
-        # timeout
+        # timeout (via embedder_kwargs)
         m = 3  # Feasible, but takes significantly more than a second
         S = dnx.chimera_graph(2 * m)
         T = dnx.zephyr_graph(m)
-        timeout = 1  # An unfortunate behaviour
-        embs = find_multiple_embeddings(S, T, timeout=timeout)
+        embedder_kwargs = {"timeout": 1}
+        embs = find_multiple_embeddings(S, T, embedder_kwargs=embedder_kwargs)
         self.assertEqual(len(embs), 0)
 
         # max_num_embs
@@ -234,13 +234,16 @@ class TestEmbeddings(unittest.TestCase):
                 S, invalid_T, sublattice_size=min_sublattice_size, tile=tile
             )
 
-        small_T = dnx.chimera_graph(2, 2)
-        small_S = dnx.chimera_graph(2, 1)
-        sublattice_size = 1
+        small_T = dnx.chimera_graph(m=2, n=2)
+        small_S = dnx.chimera_graph(m=2, n=1)
+        sublattice_size = 1  # Too small
         with self.assertWarns(Warning):
             find_sublattice_embeddings(
-                small_S, small_T, sublattice_size=sublattice_size, skip_filter=False
+                small_S, small_T, sublattice_size=sublattice_size, use_filter=True
             )
+        tile = dnx.chimera_graph(m=1)  # Too small
+        with self.assertWarns(Warning):
+            find_sublattice_embeddings(small_S, small_T, tile=tile, use_filter=True)
 
 
 if __name__ == "__main__":
