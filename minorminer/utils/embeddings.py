@@ -18,6 +18,7 @@ import numpy as np
 import networkx as nx
 from typing import Union
 
+
 def visualize_embeddings(
     G: nx.Graph,
     embeddings: list,
@@ -181,6 +182,7 @@ def shuffle_graph(
     _G.add_nodes_from(nodes)
     _G.add_edges_from(edges)
     return _G
+
 
 def embeddings_to_ndarray(embs: list, node_order=None):
     """Convert list of embeddings into an ndarray

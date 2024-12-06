@@ -24,8 +24,17 @@ import numpy as np
 from typing import Union
 
 from minorminer.subgraph import find_subgraph
-from minorminer.utils.embeddings import (shuffle_graph, embeddings_to_ndarray, visualize_embeddings)
-from minorminer.utils.feasibility import (embedding_feasibility_filter, lattice_size_lower_bound, lattice_size_upper_bound)
+from minorminer.utils.embeddings import (
+    shuffle_graph,
+    embeddings_to_ndarray,
+    visualize_embeddings,
+)
+from minorminer.utils.feasibility import (
+    embedding_feasibility_filter,
+    lattice_size_lower_bound,
+)
+
+
 def find_multiple_embeddings(
     S: nx.Graph,
     T: nx.Graph,
@@ -279,8 +288,6 @@ def find_sublattice_embeddings(
                 _T.remove_nodes_from(emb.values())
 
     return embs
-
-
 
 
 if __name__ == "__main__":
