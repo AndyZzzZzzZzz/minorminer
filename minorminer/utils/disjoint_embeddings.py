@@ -382,9 +382,9 @@ def lattice_size_lower_bound(
     """Returns a lower bound on the size necessary for embedding.
 
     The lattice size is the parameter `m` of a dwave_networkx graph, also
-    called number of rows. The function returns a lower bound (necessary but 
-    not sufficient for embedding) using efficiently established graph 
-    properties such as the number of nodes, number of edges, node-degree 
+    called number of rows. The function returns a lower bound (necessary but
+    not sufficient for embedding) using efficiently established graph
+    properties such as the number of nodes, number of edges, node-degree
     distribution, and two-colorability
 
     Args:
@@ -499,11 +499,11 @@ def find_sublattice_embeddings(
         T: The target graph in which to embed. If
             raster_embedding is not None, the graph must be of type zephyr,
             pegasus, or chimera and constructed by dwave_networkx.
-        sublattice_size: The parameter m of the dwave_networkx graph defining 
-           the lattice offsets searched and tile. See documentation for 
-           zephyr, pegasus or chimera graph generators and sublattice mappings. 
+        sublattice_size: The parameter m of the dwave_networkx graph defining
+           the lattice offsets searched and tile. See documentation for
+           zephyr, pegasus or chimera graph generators and sublattice mappings.
            When tile is provided as an argument this parameter defines only the
-           sublattice mappings. :code:`lattice_size_lower_bound()` provides a 
+           sublattice mappings. :code:`lattice_size_lower_bound()` provides a
            lower bound based on a fast feasibility filter.
         timeout: Timeout per subgraph search in seconds.
             Defaults to 10. Note that `timeout=0` implies unbounded time for the
@@ -531,7 +531,7 @@ def find_sublattice_embeddings(
 
     Raises:
         ValueError: If the source graph `S` is too large for the specified tile
-            or `sublattice_size`, or if the target graph `T` is not of type 
+            or `sublattice_size`, or if the target graph `T` is not of type
             zephyr, pegasus, or chimera.
 
     Returns:
@@ -691,7 +691,9 @@ if __name__ == "__main__":
         # For each target topology, checks whether embedding the graph S into
         # that topology is feasible
         for ttopology in topologies:
-            sublattice_size = lattice_size_lower_bound(S, topology=ttopology, one_to_one=True)
+            sublattice_size = lattice_size_lower_bound(
+                S, topology=ttopology, one_to_one=True
+            )
             if sublattice_size is None:
                 print(
                     f"Embedding {stopology}-{sublattice_size_S} in "

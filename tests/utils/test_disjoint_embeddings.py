@@ -279,7 +279,7 @@ class TestEmbeddings(unittest.TestCase):
         # Test raise error when T and topology are inconsistent
         with self.assertRaises(ValueError):
             lattice_size_lower_bound(S=T, T=T, topology="chimera")
-        
+
         T = dnx.pegasus_graph(L)
         self.assertEqual(L, lattice_size_lower_bound(S=T, T=T, one_to_one=True))
         self.assertEqual(
@@ -292,11 +292,11 @@ class TestEmbeddings(unittest.TestCase):
         )
 
         # Test raise error when T and topology is both none
-        with self .assertRaises(ValueError):
+        with self.assertRaises(ValueError):
             lattice_size_lower_bound(S=T, T=None, topology=None)
         # Test raise error when graph is not dwave networkx graph
         S = nx.complete_graph(5)
-        with self .assertRaises(ValueError):
+        with self.assertRaises(ValueError):
             lattice_size_lower_bound(S=S, T=S, t=1)
 
         m = 6
@@ -354,7 +354,11 @@ class TestEmbeddings(unittest.TestCase):
         T = dnx.chimera_graph(min_sublattice_size + 1)
         tile = dnx.chimera_graph(min_sublattice_size, node_list=list(range(1, 8)))
         embs = find_sublattice_embeddings(
-            S, T, sublattice_size=min_sublattice_size, max_num_emb=float("Inf"), tile=tile
+            S,
+            T,
+            sublattice_size=min_sublattice_size,
+            max_num_emb=float("Inf"),
+            tile=tile,
         )
         self.assertEqual(len(embs), 4)
         nodes_used = {v for emb in embs for v in emb.values()}
@@ -364,7 +368,11 @@ class TestEmbeddings(unittest.TestCase):
         )
         tile5 = dnx.chimera_graph(min_sublattice_size, node_list=list(range(3, 8)))
         embs = find_sublattice_embeddings(
-            S, T, sublattice_size=min_sublattice_size, max_num_emb=float("Inf"), tile=tile5
+            S,
+            T,
+            sublattice_size=min_sublattice_size,
+            max_num_emb=float("Inf"),
+            tile=tile5,
         )
         self.assertEqual(len(embs), 0, "Tile is too small")
 
@@ -387,8 +395,8 @@ class TestEmbeddings(unittest.TestCase):
                 S, invalid_T, sublattice_size=min_sublattice_size, tile=tile
             )
 
-        small_T = dnx.chimera_graph(2,2)
-        small_S = dnx.chimera_graph(2,1)
+        small_T = dnx.chimera_graph(2, 2)
+        small_S = dnx.chimera_graph(2, 1)
         sublattice_size = 1
         with self.assertRaises(ValueError):
             find_sublattice_embeddings(
@@ -430,6 +438,7 @@ class TestEmbeddings(unittest.TestCase):
         node_order = [2, 0]
         with self.assertRaises(KeyError):
             embeddings_to_ndarray(embs, node_order=node_order)
+
 
 if __name__ == "__main__":
     unittest.main()
