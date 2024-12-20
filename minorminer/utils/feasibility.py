@@ -105,7 +105,7 @@ def embedding_feasibility_filter(
         return True
 
 
-def lattice_size_upper_bound(T: nx.Graph = None) -> int:
+def lattice_size(T: nx.Graph = None) -> int:
     """Determines an upper bound on the lattice size.
 
     The lattice size is the parameter ``m`` of a dwave_networkx graph, also
