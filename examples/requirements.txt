@@ -1,1 +1,2 @@
 dwave_networkx
+matplotlib==3.9.2
