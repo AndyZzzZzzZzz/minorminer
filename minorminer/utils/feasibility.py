@@ -178,7 +178,7 @@ def lattice_size_lower_bound(
         if t is None:
             t = 4
         max_degrees = {"chimera": 2 + 2 * t, "pegasus": 15, "zephyr": 4 + 4 * t}
-        max_source_degree = max(S.degree[n] for n in S.nodes())
+        max_source_degree = max(d for _, d in S.degree)
 
         if max_source_degree > max_degrees[topology]:
             return None
