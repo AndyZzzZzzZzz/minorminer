@@ -23,7 +23,7 @@ import dwave_networkx as dnx
 import networkx as nx
 import numpy as np
 from collections import Counter
-
+from typing import Optional
 
 def embedding_feasibility_filter(
     S: nx.Graph, T: nx.Graph, one_to_one: bool = False
@@ -125,7 +125,7 @@ def lattice_size_lower_bound(
     topology: str = None,
     t: int = None,
     one_to_one: bool = False,
-) -> float:
+) -> Optional[int]:
     """Returns a lower bound on the size necessary for embedding.
 
     The lattice size is the parameter ``m`` of a dwave_networkx graph, also
