@@ -20,7 +20,7 @@ import dwave_networkx as dnx
 
 from minorminer.utils.feasibility import (
     embedding_feasibility_filter,
-     lattice_size,
+    lattice_size,
     lattice_size_lower_bound,
 )
 

@@ -56,7 +56,11 @@ def embedding_feasibility_filter(
         or T.number_of_edges() < S.number_of_edges()
     ):
         return False
-   
+    if S.number_of_nodes() == 0:
+        return True
+    elif T.number_of_nodes() == 0:
+        return False
+
     S_degree = np.sort([S.degree[n] for n in S.nodes()])
     T_degree = np.sort([T.degree[n] for n in T.nodes()])
 
