@@ -83,6 +83,7 @@ def embedding_feasibility_filter(
 
         if all(v > 0 for v in ResidualCounts.values()):
             return True
+
         nT_auxiliary = sum(ResidualCounts.values())
         if nT_auxiliary < 0:  # extra available to form chains
             return False
